@@ -13,7 +13,7 @@
 
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime
 
 import requests
 from bs4 import BeautifulSoup
@@ -25,8 +25,10 @@ URL = "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do"
 NOTICE_PAT = re.compile(
     r"(운영시간|휴점|휴무|미운영|주문\s*마감|문의해|변경\s*될\s*수|원산지|알레르기"
     r"|일일메뉴표|주말\s*보내세요|사전\s*주문|주문\s*필수|오픈합니다|정기식신청자"
-    r"|방학\s*중\s*안내|안내\s*사항)"
+    r"|방학\s*중\s*안내|안내\s*사항|상기\s*메뉴|원재료|식수)"
 )
+# "08:30 ~ 10:00", "중식11:30~14:00" 같은 콜론 형식 운영시간이 들어간 줄
+CLOCK_PAT = re.compile(r"\d{1,2}:\d{2}")
 # 시간대/요일만 적힌 줄 (예: "10시~17시", "평일 11시~18시", "토/일요일")
 TIME_ONLY_PAT = re.compile(
     r"^[\s<(\[]*(평일|주말)?\s*(\d{1,2}\s*시\s*(\d{1,2}분)?\s*[~-]\s*\d{1,2}\s*시"
@@ -121,6 +123,9 @@ def parse_cell(lines: list, default_meal):
         # 시간대/요일만 적힌 줄도 스킵 (예: "10시~17시", "평일 11시~18시")
         if TIME_ONLY_PAT.match(line):
             continue
+        # "08:30 ~ 10:00" 같은 콜론 형식 운영시간이 포함된 줄은 공지로 간주
+        if CLOCK_PAT.search(line):
+            continue
         # <이벤트> <비오는날> 같은 꺾쇠 장식 제거 (메뉴명은 유지)
         line = re.sub(r"<[^>]*>", " ", line).strip()
         if not line:
@@ -180,6 +185,12 @@ def parse_table(table) -> dict:
 
         for idx, cell in enumerate(cells[1:], start=1):
             if idx >= len(dates) or dates[idx] is None:
+                continue
+            # 주말(토/일) 데이터는 버림 — 교내 식당은 주말 휴무인데
+            # 원본 페이지가 주간 메뉴를 주말 칸에도 복붙해두기 때문.
+            # 단, 생활관식당(기숙사)은 주말에도 운영하므로 예외.
+            weekday = date.fromisoformat(dates[idx]).weekday()  # 5=토, 6=일
+            if weekday >= 5 and "생활관" not in name:
                 continue
             lines = split_cell_lines(cell)
             if not lines:
