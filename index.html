@@ -168,6 +168,11 @@
     white-space: nowrap; line-height: 1.2;
   }
   .chip.active { background: #ffd66b; color: var(--navy); }
+  /* 운영 중 식당 칩의 초록 점 */
+  .chip-dot {
+    display: inline-block; width: 6px; height: 6px; margin-left: 5px;
+    border-radius: 50%; background: #22c55e; vertical-align: middle;
+  }
 
   /* ── 본문 ── */
   main { max-width: 640px; margin: 0 auto; padding: 16px 12px 60px; }
@@ -183,6 +188,16 @@
   }
   .restaurant .name { font-size: 17px; font-weight: 700; }
   .restaurant .loc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .restaurant .rhours {
+    font-size: 12px; color: var(--sub); margin-top: 4px; line-height: 1.5;
+  }
+  /* '지금 운영 중' 초록 배지 */
+  .open-badge {
+    display: inline-block; vertical-align: middle;
+    margin-left: 6px; padding: 2px 8px;
+    font-size: 11px; font-weight: 700;
+    color: #15803d; background: #dcfce7; border-radius: 999px;
+  }
   .restaurant .count {
     font-size: 12px; color: var(--navy); background: var(--navy-soft);
     border-radius: 20px; padding: 4px 10px; white-space: nowrap;
@@ -443,6 +458,33 @@ function isWeekend(dateISO) {
   const wd = new Date(dateISO + "T00:00:00").getDay();
   return wd === 0 || wd === 6;  // 0=일, 6=토
 }
+
+// ── 운영시간 / '지금 운영 중' 판정 ──
+// hours(원문 줄들)에서 시간 범위를 추출. [분,분] 배열. 못 뽑으면 빈 배열.
+function parseRangesFromHours(hours) {
+  if (!hours || !hours.length) return [];
+  const text = hours.join("\n");
+  const ranges = [];
+  let m;
+  const reClock = /(\d{1,2}):(\d{2})\s*[~∼\-]\s*(\d{1,2}):(\d{2})/g;   // 08:30 ~ 10:00
+  while ((m = reClock.exec(text))) ranges.push([+m[1] * 60 + +m[2], +m[3] * 60 + +m[4]]);
+  const reHour = /(\d{1,2})\s*시\s*(\d{1,2})?\s*분?\s*[~∼\-]\s*(\d{1,2})\s*시\s*(\d{1,2})?\s*분?/g;  // 11시~18시
+  while ((m = reHour.exec(text))) ranges.push([+m[1] * 60 + +(m[2] || 0), +m[3] * 60 + +(m[4] || 0)]);
+  return ranges.filter(r => r[0] < r[1] && r[1] <= 1440);
+}
+function kstNow() {                    // KST 기준 {min: 자정부터 분, dow: 요일}
+  const d = new Date(Date.now() + 9 * 3600000);
+  return { min: d.getUTCHours() * 60 + d.getUTCMinutes(), dow: d.getUTCDay() };
+}
+// true=운영 중, false=운영 종료, null=판정 불가(범위 추출 실패 또는 주말 오판 회피)
+function isOpenNow(restaurant) {
+  const ranges = parseRangesFromHours(restaurant && restaurant.hours);
+  if (!ranges.length) return null;    // 범위를 못 뽑으면 억지 판정하지 않음
+  const now = kstNow();
+  // 주말엔 교내 식당 대부분 휴무 → 틀린 '운영 중'을 피하려 생활관 외에는 배지 생략
+  if ((now.dow === 0 || now.dow === 6) && !(restaurant.name || "").includes("생활관")) return null;
+  return ranges.some(r => now.min >= r[0] && now.min < r[1]);
+}
 // 해당 날짜에 어떤 식당이든 메뉴가 있으면 true
 function dateHasAnyData(dateISO) {
   return restaurantsForDate(dateISO).some(r =>
@@ -551,7 +593,8 @@ function init() {
   const restsEl = document.getElementById("rests");
   restsEl.innerHTML = ordered.map(r => {
     const n = baseName(r.name);
-    return `<button class="chip ${n === selectedRestaurant ? "active" : ""}" data-rest="${n}">${n}</button>`;
+    const dot = isOpenNow(r) === true ? `<span class="chip-dot" title="운영 중"></span>` : "";
+    return `<button class="chip ${n === selectedRestaurant ? "active" : ""}" data-rest="${n}">${n}${dot}</button>`;
   }).join("");
 
   restsEl.querySelectorAll(".chip").forEach(btn => {
@@ -798,12 +841,18 @@ function render() {
   if (countText) subParts.push(countText);
   const sub = subParts.join(" · ");
 
+  // 운영시간 + '지금 운영 중' 배지 (hours가 있을 때만)
+  const openBadge = isOpenNow(r) === true ? `<span class="open-badge">지금 운영 중</span>` : "";
+  const hoursHtml = (r.hours && r.hours.length)
+    ? `<div class="rhours">🕒 ${r.hours.join(" · ")}</div>` : "";
+
   main.innerHTML = `
     <section class="restaurant">
       <div class="head">
         <span>
-          <div class="name">${name}</div>
+          <div class="name">${name}${openBadge}</div>
           ${sub ? `<div class="loc">${sub}</div>` : ""}
+          ${hoursHtml}
         </span>
         <button class="kcal-toggle ${calOn ? "on" : ""}" onclick="toggleKcal()"
                 role="switch" aria-checked="${calOn}" aria-label="칼로리 추정 표시">
