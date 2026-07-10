@@ -101,15 +101,19 @@
     font-size: 20px; cursor: pointer;
   }
   .cal-grid {
-    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
-    min-height: 200px;
+    display: grid;
+    /* minmax(0,1fr): 1fr(=minmax(auto,1fr))은 aspect-ratio 셀의 콘텐츠 최소폭
+       때문에 트랙이 팝업 밖으로 넘친다. 0을 최소로 줘 7열이 폭을 균등 분할. */
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
   }
   .cal-dow {
     text-align: center; font-size: 11px; color: var(--sub);
     padding: 4px 0; font-weight: 700;
   }
   .cal-cell {
-    aspect-ratio: 1; border: none; border-radius: 8px;
+    min-width: 0; aspect-ratio: 1;
+    border: none; border-radius: 8px;
     background: none; font-family: inherit; font-size: 14px;
     display: flex; align-items: center; justify-content: center;
   }
