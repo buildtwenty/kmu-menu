@@ -288,12 +288,13 @@ function init() {
   // 데이터 최소~최대(+오늘)까지 빈 날 없이 연속 달력으로 채움 (미래 포함)
   const lower = allDates.length ? allDates[0] : today;
   const dataMax = allDates.length ? allDates[allDates.length - 1] : today;
-  // 탭 끝 = '데이터 최대 날짜'와 '이번 주(일~토) 토요일' 중 더 나중
-  // (금요일에 봐도 다가오는 토요일이 미리 보이게)
+  // 탭 끝 = '데이터 최대 날짜'와 '다가오는 일요일' 중 더 나중
+  // (주가 일요일 시작이라, 어느 요일에 봐도 눈앞의 토/일 휴무 탭이 보이게)
+  // 다가오는 일요일 = 오늘이 일요일이면 오늘, 아니면 오늘 이후 첫 일요일
   const dow = new Date(today + "T00:00:00").getDay();          // 0=일 … 6=토
-  const satMs = new Date(today + "T00:00:00").getTime() + ((6 - dow + 7) % 7) * 86400000;
-  const thisSaturday = new Date(satMs).toLocaleDateString("sv-SE");
-  const upper = dataMax >= thisSaturday ? dataMax : thisSaturday;
+  const sunMs = new Date(today + "T00:00:00").getTime() + ((7 - dow) % 7) * 86400000;
+  const upcomingSunday = new Date(sunMs).toLocaleDateString("sv-SE");
+  const upper = dataMax >= upcomingSunday ? dataMax : upcomingSunday;
   const full = continuousDates(lower, upper);
 
   // 과거가 쌓여도 탭이 길어지지 않게 최근 약 3주치만 노출 (미래는 유지)
