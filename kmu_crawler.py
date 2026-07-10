@@ -54,6 +54,16 @@ DATE_PAT = re.compile(r"(\d{4})\.(\d{2})\.(\d{2})")
 # 장식 문자 제거용 (★프리미엄특식★, ♡...♡ 등은 남겨두고 싶으면 이 부분 수정)
 DECOR_PAT = re.compile(r"[★☆♡♥◇※]+")
 
+# 운영시간 줄 판별 (메뉴에서는 계속 제외하되, hours 필드로 따로 보존).
+# 형식이 제각각이라 구조화하지 않고 원문 그대로 저장한다.
+#   예: "운영시간", "평일운영시간", "중식11:30~14:00", "조식 : 08:30 ~ 10:00", "11시~18시"
+HOURS_PAT = re.compile(
+    r"운영\s*시간"                                          # '운영시간', '평일운영시간', '학기 중 운영시간'
+    r"|\d{1,2}:\d{2}\s*[~∼\-]\s*\d{1,2}:\d{2}"              # 08:30 ~ 10:00, 11:30~14:00
+    r"|\d{1,2}\s*시\s*[~∼\-]\s*\d{1,2}\s*시"                # 11시~18시, 10시~17시
+    r"|(조식|중식|석식|조\s*중식)\s*:?\s*\d{1,2}\s*[:시]"   # 중식11:30, 석식17:00
+)
+
 
 # 최종 안전망: 완성된 이름이 공지처럼 보이면 버림 (가격 없는 경우에만)
 JUNK_NAME_PAT = re.compile(r"(안내|방학|평일|주말|요일|휴무|휴점|운영|공휴일)")
@@ -96,11 +106,13 @@ def split_cell_lines(cell) -> list:
     return [ln for ln in lines if ln]
 
 
-def parse_cell(lines: list, default_meal):
+def parse_cell(lines: list, default_meal, hours_sink=None):
     """
     셀 한 칸을 파싱해서 [{meal, items:[{name, price}]}] 형태로 반환.
     - [중식]/[석식] 태그가 있으면 태그 기준으로 끼니를 나눔
     - 가격(￦)이 나올 때마다 '하나의 메뉴 세트'로 묶어서 flush
+    - hours_sink(list)가 주어지면, 운영시간 줄을 원문 그대로 거기에 모은다
+      (메뉴 items에서는 계속 제외)
     """
     results = []
     current_meal = default_meal
@@ -127,6 +139,11 @@ def parse_cell(lines: list, default_meal):
         current_items = []
 
     for line in lines:
+        # 운영시간 줄은 메뉴에서 제외하되 hours_sink에 원문 보존
+        if HOURS_PAT.search(line):
+            if hours_sink is not None:
+                hours_sink.append(line)
+            continue
         # 공지/안내 줄은 스킵
         if NOTICE_PAT.search(line):
             continue
@@ -186,6 +203,7 @@ def parse_table(table) -> dict:
         dates.append(f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None)
 
     menus = []
+    hours_raw = []
     for row in table.find_all("tr")[1:]:
         cells = row.find_all(["th", "td"])
         if len(cells) < 2:
@@ -196,14 +214,18 @@ def parse_table(table) -> dict:
         for idx, cell in enumerate(cells[1:], start=1):
             if idx >= len(dates) or dates[idx] is None:
                 continue
-            # 주말(토/일) 데이터는 버림 — 교내 식당은 주말 휴무인데
+            lines = split_cell_lines(cell)
+            if not lines:
+                continue
+            # 운영시간 줄은 주말/평일 구분 없이 원문 그대로 수집 (메뉴에서는 제외)
+            for ln in lines:
+                if HOURS_PAT.search(ln):
+                    hours_raw.append(ln)
+            # 주말(토/일) 데이터는 메뉴에서 버림 — 교내 식당은 주말 휴무인데
             # 원본 페이지가 주간 메뉴를 주말 칸에도 복붙해두기 때문.
             # 단, 생활관식당(기숙사)은 주말에도 운영하므로 예외.
             weekday = date.fromisoformat(dates[idx]).weekday()  # 5=토, 6=일
             if weekday >= 5 and "생활관" not in name:
-                continue
-            lines = split_cell_lines(cell)
-            if not lines:
                 continue
             for block in parse_cell(lines, default_meal):
                 menus.append({
@@ -213,7 +235,14 @@ def parse_table(table) -> dict:
                     "items": block["items"],
                 })
 
-    return {"name": name, "menus": menus}
+    # 운영시간 중복 제거(첫 등장 순서 보존)
+    seen = set()
+    hours = [h for h in hours_raw if not (h in seen or seen.add(h))]
+
+    result = {"name": name, "menus": menus}
+    if hours:
+        result["hours"] = hours
+    return result
 
 
 def load_existing_restaurants(path: str) -> list:
@@ -251,13 +280,25 @@ def merge_restaurants(old_restaurants: list, new_restaurants: list) -> list:
             for corner, blocks in corners.items():
                 m_corners[corner] = blocks  # 새 (날짜,코너)가 기존을 덮어씀
 
+    # hours(운영시간)는 식당 단위 메타데이터: 새 크롤 것이 있으면 최신으로 갱신
+    hours_map = {}
+    for r in old_restaurants:
+        if r.get("hours"):
+            hours_map[r["name"]] = r["hours"]
+    for r in new_restaurants:
+        if r.get("hours"):
+            hours_map[r["name"]] = r["hours"]
+
     result = []
     for name, dates in merged.items():
         menus = []
         for dt in sorted(dates):  # 날짜 오름차순
             for blocks in dates[dt].values():  # 코너 삽입 순서 유지
                 menus.extend(blocks)
-        result.append({"name": name, "menus": menus})
+        entry = {"name": name, "menus": menus}
+        if hours_map.get(name):
+            entry["hours"] = hours_map[name]
+        result.append(entry)
     return result
 
 
@@ -296,7 +337,10 @@ def split_by_month(restaurants: list) -> dict:
         for m in r["menus"]:
             by_ym.setdefault(m["date"][:7], []).append(m)
         for ym, menus in by_ym.items():
-            months.setdefault(ym, []).append({"name": r["name"], "menus": menus})
+            entry = {"name": r["name"], "menus": menus}
+            if r.get("hours"):
+                entry["hours"] = r["hours"]  # 운영시간은 식당 단위라 각 월에 함께 저장
+            months.setdefault(ym, []).append(entry)
     return months
 
 
@@ -330,7 +374,10 @@ def rebuild_recent(today: date) -> list:
     for r in merged:
         menus = [m for m in r["menus"] if m["date"] >= cutoff.isoformat()]
         if menus:
-            result.append({"name": r["name"], "menus": menus})
+            entry = {"name": r["name"], "menus": menus}
+            if r.get("hours"):
+                entry["hours"] = r["hours"]
+            result.append(entry)
     return result
 
 
