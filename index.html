@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>국민대 오늘의 학식</title>
+<meta name="description" content="국민대학교 학식 메뉴를 한눈에">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
+<style>
+  /* ── 디자인 토큰: 색과 크기를 한 곳에서 관리 ── */
+  :root {
+    --navy: #0f2b5b;        /* 국민대 남색 */
+    --navy-soft: #eaeff8;
+    --ink: #1c1e24;
+    --sub: #6b7280;
+    --line: #e6e8ee;
+    --bg: #f6f7fa;
+    --card: #ffffff;
+    --breakfast: #b45309;  --breakfast-bg: #fdf1e0;
+    --lunch: #0f6e56;      --lunch-bg: #e3f4ed;
+    --dinner: #5b45b0;     --dinner-bg: #edeafa;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Pretendard, -apple-system, sans-serif;
+    background: var(--bg); color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── 상단 헤더 ── */
+  header {
+    background: var(--navy); color: #fff;
+    padding: 22px 16px 14px;
+  }
+  header .wrap { max-width: 640px; margin: 0 auto; }
+  h1 {
+    font-family: 'Black Han Sans', Pretendard, sans-serif;
+    font-size: 26px; font-weight: 400; letter-spacing: 0.5px;
+  }
+  h1 .bowl { color: #ffd66b; }
+  .updated { font-size: 12px; opacity: 0.75; margin-top: 4px; }
+
+  /* ── 요일 탭 ── */
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--navy);
+    padding: 8px 8px 12px;
+    box-shadow: 0 2px 8px rgba(15,43,91,0.25);
+  }
+  .days {
+    max-width: 640px; margin: 0 auto;
+    display: flex; gap: 6px; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .days::-webkit-scrollbar { display: none; }
+  .day {
+    flex: 1 0 auto; min-width: 74px;
+    border: none; border-radius: 10px;
+    background: rgba(255,255,255,0.12); color: #fff;
+    padding: 8px 4px; text-align: center; cursor: pointer;
+    font-family: inherit; font-size: 13px; line-height: 1.35;
+  }
+  .day b { display: block; font-size: 15px; }
+  .day.active { background: #fff; color: var(--navy); font-weight: 700; }
+  .day.today-mark b::after { content: " ·오늘"; font-size: 10px; color: #d97706; }
+  .day.active.today-mark b::after { color: #b45309; }
+
+  /* ── 본문 ── */
+  main { max-width: 640px; margin: 0 auto; padding: 16px 12px 60px; }
+
+  .restaurant {
+    background: var(--card); border-radius: var(--radius);
+    border: 1px solid var(--line);
+    margin-bottom: 14px; overflow: hidden;
+  }
+  .restaurant > button.head {
+    width: 100%; border: none; background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 15px 16px; font-family: inherit; text-align: left;
+  }
+  .restaurant .name { font-size: 17px; font-weight: 700; }
+  .restaurant .loc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .restaurant .count {
+    font-size: 12px; color: var(--navy); background: var(--navy-soft);
+    border-radius: 20px; padding: 4px 10px; white-space: nowrap;
+  }
+  .restaurant .body { border-top: 1px solid var(--line); padding: 6px 16px 14px; }
+  .restaurant.closed .body { display: none; }
+
+  .corner { padding: 12px 0; }
+  .corner + .corner { border-top: 1px dashed var(--line); }
+  .corner-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .corner-name { font-size: 13px; font-weight: 700; color: var(--sub); }
+  .meal {
+    font-size: 11px; font-weight: 700;
+    border-radius: 6px; padding: 2px 7px;
+  }
+  .meal.조식 { color: var(--breakfast); background: var(--breakfast-bg); }
+  .meal.중식 { color: var(--lunch); background: var(--lunch-bg); }
+  .meal.석식 { color: var(--dinner); background: var(--dinner-bg); }
+  .meal.중식석식 { color: var(--lunch); background: var(--lunch-bg); }
+  .meal.next {
+    outline: 2px solid currentColor; outline-offset: 1px;
+  }
+
+  .item {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-top: 8px;
+  }
+  .item .menu-name { font-size: 15px; line-height: 1.45; }
+  .item .price {
+    font-variant-numeric: tabular-nums;
+    font-size: 14px; font-weight: 700; color: var(--navy);
+    white-space: nowrap;
+  }
+
+  .empty {
+    text-align: center; color: var(--sub);
+    padding: 60px 20px; font-size: 15px; line-height: 1.7;
+  }
+  footer {
+    max-width: 640px; margin: 0 auto; padding: 0 16px 40px;
+    font-size: 12px; color: var(--sub); text-align: center;
+  }
+  footer a { color: var(--sub); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .restaurant { animation: rise 0.25s ease both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1><span class="bowl">🍚</span> 국민대 오늘의 학식</h1>
+    <div class="updated" id="updated">불러오는 중…</div>
+  </div>
+</header>
+
+<nav><div class="days" id="days"></div></nav>
+
+<main id="main"><div class="empty">메뉴를 불러오는 중이에요…</div></main>
+
+<footer>
+  메뉴는 매일 새벽 자동 갱신됩니다. 실제 운영과 다를 수 있어요.<br>
+  출처: 국민대학교 오늘의 메뉴
+</footer>
+
+<script>
+/* ────────────────────────────────────────────────
+   1) 데이터 불러오기
+   같은 폴더의 menus.json을 읽는다 (크롤러가 만든 파일)
+──────────────────────────────────────────────── */
+let DATA = null;
+let selectedDate = null;
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+fetch("menus.json")
+  .then(res => res.json())
+  .then(data => {
+    DATA = data;
+    init();
+  })
+  .catch(() => {
+    document.getElementById("main").innerHTML =
+      '<div class="empty">메뉴를 불러오지 못했어요 😢<br>잠시 후 새로고침 해주세요.</div>';
+  });
+
+/* ────────────────────────────────────────────────
+   2) 초기화: 날짜 목록 만들고 오늘 선택
+──────────────────────────────────────────────── */
+function init() {
+  // 데이터에 있는 모든 날짜를 모아 정렬
+  const dateSet = new Set();
+  DATA.restaurants.forEach(r =>
+    r.menus.forEach(m => dateSet.add(m.date))
+  );
+  const dates = [...dateSet].sort();
+
+  // 오늘 날짜 (예: "2026-07-10")
+  const today = new Date().toLocaleDateString("sv-SE"); // sv-SE 로케일 = YYYY-MM-DD 형식
+  selectedDate = dates.includes(today) ? today : dates[0];
+
+  // 업데이트 시각 표시
+  const t = new Date(DATA.fetched_at);
+  document.getElementById("updated").textContent =
+    `업데이트 ${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+
+  // 요일 탭 만들기
+  const daysEl = document.getElementById("days");
+  daysEl.innerHTML = dates.map(d => {
+    const dt = new Date(d + "T00:00:00");
+    const isToday = d === today;
+    return `<button class="day ${d === selectedDate ? "active" : ""} ${isToday ? "today-mark" : ""}"
+              data-date="${d}">
+              <b>${WEEKDAYS[dt.getDay()]}</b>${dt.getMonth() + 1}/${dt.getDate()}
+            </button>`;
+  }).join("");
+
+  daysEl.querySelectorAll(".day").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedDate = btn.dataset.date;
+      daysEl.querySelectorAll(".day").forEach(b => b.classList.toggle("active", b === btn));
+      render();
+    });
+  });
+
+  render();
+}
+
+/* ────────────────────────────────────────────────
+   3) 지금 시각 기준 "다가오는 끼니" 계산
+   (10:30 전 = 조식, 15:00 전 = 중식, 그 후 = 석식)
+──────────────────────────────────────────────── */
+function nextMeal() {
+  const h = new Date().getHours() + new Date().getMinutes() / 60;
+  if (h < 10.5) return "조식";
+  if (h < 15) return "중식";
+  return "석식";
+}
+
+/* ────────────────────────────────────────────────
+   4) 화면 그리기: 선택된 날짜의 식당 카드들
+──────────────────────────────────────────────── */
+function render() {
+  const main = document.getElementById("main");
+  const isToday = selectedDate === new Date().toLocaleDateString("sv-SE");
+  const highlight = isToday ? nextMeal() : null;
+
+  const cards = DATA.restaurants.map(r => {
+    // 이 식당의 선택 날짜 메뉴만 골라냄
+    const menus = r.menus.filter(m => m.date === selectedDate && m.items.length);
+    if (!menus.length) return "";
+
+    // 식당 이름에서 위치 분리: "한울식당(법학관 지하1층)" → 이름 + 위치
+    const match = r.name.match(/^(.*?)\((.*)\)$/);
+    const name = match ? match[1] : r.name;
+    const loc = match ? match[2] : "";
+
+    const cornersHtml = menus.map(m => {
+      const mealBadge = m.meal
+        ? `<span class="meal ${m.meal.replace("/", "")} ${m.meal === highlight ? "next" : ""}">${m.meal}</span>`
+        : "";
+      const itemsHtml = m.items.map(i => `
+        <div class="item">
+          <span class="menu-name">${i.name}</span>
+          ${i.price ? `<span class="price">${i.price.toLocaleString()}원</span>` : ""}
+        </div>`).join("");
+      return `
+        <div class="corner">
+          <div class="corner-head">
+            <span class="corner-name">${m.corner}</span>${mealBadge}
+          </div>
+          ${itemsHtml}
+        </div>`;
+    }).join("");
+
+    return `
+      <section class="restaurant">
+        <button class="head" onclick="this.parentElement.classList.toggle('closed')">
+          <span>
+            <div class="name">${name}</div>
+            ${loc ? `<div class="loc">📍 ${loc}</div>` : ""}
+          </span>
+          <span class="count">${menus.length}개 코너</span>
+        </button>
+        <div class="body">${cornersHtml}</div>
+      </section>`;
+  }).join("");
+
+  main.innerHTML = cards ||
+    '<div class="empty">이 날짜에는 등록된 메뉴가 없어요.<br>주말이거나 방학 휴점일 수 있어요 🌙</div>';
+}
+</script>
+</body>
+</html>
