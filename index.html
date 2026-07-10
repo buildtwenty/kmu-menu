@@ -190,8 +190,20 @@
   }
   .restaurant .name { font-size: 17px; font-weight: 700; }
   .restaurant .loc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  /* 운영시간 블록 */
   .restaurant .rhours {
-    font-size: 12px; color: var(--sub); margin-top: 4px; line-height: 1.5;
+    font-size: 12px; color: var(--sub); margin-top: 6px;
+  }
+  .rhours .hours-cap { font-weight: 700; margin-bottom: 2px; }
+  .rhours .hours-lines { display: flex; flex-direction: column; }
+  .rhours .hline { line-height: 1.5; }
+  .rhours .hline.hhead { margin-top: 3px; color: var(--ink); font-weight: 600; }
+  .rhours .hline.hhead:first-child { margin-top: 0; }
+  /* 접힌 상태: 처음 2줄만 보이고 나머지는 숨김 */
+  .rhours.collapsed .hline:nth-child(n+3) { display: none; }
+  .rhours .hours-toggle {
+    margin-top: 3px; padding: 0; border: none; background: none;
+    color: var(--navy); font: inherit; font-weight: 700; cursor: pointer;
   }
   /* '지금 운영 중' 초록 배지 */
   .open-badge {
@@ -495,6 +507,25 @@ function isOpenNow(restaurant) {
   // 주말엔 교내 식당 대부분 휴무 → 틀린 '운영 중'을 피하려 생활관 외에는 배지 생략
   if ((now.dow === 0 || now.dow === 6) && !(restaurant.name || "").includes("생활관")) return null;
   return ranges.some(r => now.min >= r[0] && now.min < r[1]);
+}
+// 운영시간을 섹션(◇/※ 헤더)별로 줄바꿈해 표시. 3줄 초과면 접고 '더보기'로 펼침.
+function renderHours(hours) {
+  if (!hours || !hours.length) return "";
+  const rows = hours.map(l => {
+    const t = l.trim();
+    const head = /^[◇※]/.test(t);   // 섹션 구분 헤더
+    return `<div class="hline${head ? " hhead" : ""}">${t}</div>`;
+  }).join("");
+  const many = hours.length > 3;
+  return `<div class="rhours${many ? " collapsed" : ""}">`
+    + `<div class="hours-cap">🕒 운영시간</div>`
+    + `<div class="hours-lines">${rows}</div>`
+    + (many ? `<button type="button" class="hours-toggle" onclick="toggleHours(this)">더보기</button>` : "")
+    + `</div>`;
+}
+function toggleHours(btn) {
+  const collapsed = btn.closest(".rhours").classList.toggle("collapsed");
+  btn.textContent = collapsed ? "더보기" : "접기";
 }
 // 해당 날짜에 어떤 식당이든 메뉴가 있으면 true
 function dateHasAnyData(dateISO) {
@@ -856,8 +887,7 @@ function render() {
 
   // 운영시간 + '지금 운영 중' 배지 (hours가 있을 때만)
   const openBadge = isOpenNow(r) === true ? `<span class="open-badge">지금 운영 중</span>` : "";
-  const hoursHtml = (r.hours && r.hours.length)
-    ? `<div class="rhours">🕒 ${r.hours.join(" · ")}</div>` : "";
+  const hoursHtml = renderHours(r.hours);
 
   main.innerHTML = `
     <section class="restaurant">
