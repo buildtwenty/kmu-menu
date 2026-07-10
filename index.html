@@ -444,18 +444,27 @@ function showKcalNotice() {
   }, 3200);
 }
 
-// fromISO~toISO(포함) 사이 날짜를 하루 간격 연속 배열로 (한국은 DST 없어 안전)
+// ── KST(UTC+9, DST 없음) 시간 헬퍼 ──
+// 접속자 브라우저 시간대와 무관하게 항상 '한국 학식 기준'으로 계산한다.
+const KST_OFFSET_MS = 9 * 3600000;
+// 어떤 instant를 KST 벽시계로 바꾼다: +9h 한 뒤 getUTC* 로 읽으면 KST 값.
+function toKst(instant) { return new Date(instant.getTime() + KST_OFFSET_MS); }
+function kstTodayISO() { return toKst(new Date()).toISOString().slice(0, 10); }  // 오늘(KST) "YYYY-MM-DD"
+// 날짜 문자열(YYYY-MM-DD)의 요일 (UTC 파싱이라 접속자 tz 무관)
+function dowOf(dateISO) { return new Date(dateISO + "T00:00:00Z").getUTCDay(); }
+
+// fromISO~toISO(포함) 사이 날짜를 하루 간격 연속 배열로 (UTC 기준이라 DST 영향 없음)
 function continuousDates(fromISO, toISO) {
   const out = [];
-  const end = new Date(toISO + "T00:00:00").getTime();
-  for (let t = new Date(fromISO + "T00:00:00").getTime(); t <= end; t += 86400000) {
-    out.push(new Date(t).toLocaleDateString("sv-SE"));
+  const end = Date.parse(toISO + "T00:00:00Z");
+  for (let t = Date.parse(fromISO + "T00:00:00Z"); t <= end; t += 86400000) {
+    out.push(new Date(t).toISOString().slice(0, 10));
   }
   return out;
 }
 
 function isWeekend(dateISO) {
-  const wd = new Date(dateISO + "T00:00:00").getDay();
+  const wd = dowOf(dateISO);
   return wd === 0 || wd === 6;  // 0=일, 6=토
 }
 
@@ -473,7 +482,7 @@ function parseRangesFromHours(hours) {
   return ranges.filter(r => r[0] < r[1] && r[1] <= 1440);
 }
 function kstNow() {                    // KST 기준 {min: 자정부터 분, dow: 요일}
-  const d = new Date(Date.now() + 9 * 3600000);
+  const d = toKst(new Date());
   return { min: d.getUTCHours() * 60 + d.getUTCMinutes(), dow: d.getUTCDay() };
 }
 // true=운영 중, false=운영 종료, null=판정 불가(범위 추출 실패 또는 주말 오판 회피)
@@ -548,8 +557,8 @@ function init() {
   DATE_SET = dateSet;  // render()에서 '데이터 없는 날' 판별에 사용
   const allDates = [...dateSet].sort();
 
-  // 오늘 날짜 (예: "2026-07-10")
-  const today = new Date().toLocaleDateString("sv-SE"); // sv-SE 로케일 = YYYY-MM-DD 형식
+  // 오늘 날짜 (KST 기준, 접속자 tz 무관)
+  const today = kstTodayISO();
 
   // 데이터 최소~최대(+오늘)까지 빈 날 없이 연속 달력으로 채움 (미래 포함)
   const lower = allDates.length ? allDates[0] : today;
@@ -557,24 +566,25 @@ function init() {
   // 탭 끝 = '데이터 최대 날짜'와 '다가오는 일요일' 중 더 나중
   // (주가 일요일 시작이라, 어느 요일에 봐도 눈앞의 토/일 휴무 탭이 보이게)
   // 다가오는 일요일 = 오늘이 일요일이면 오늘, 아니면 오늘 이후 첫 일요일
-  const dow = new Date(today + "T00:00:00").getDay();          // 0=일 … 6=토
-  const sunMs = new Date(today + "T00:00:00").getTime() + ((7 - dow) % 7) * 86400000;
-  const upcomingSunday = new Date(sunMs).toLocaleDateString("sv-SE");
+  const dow = dowOf(today);                                    // 0=일 … 6=토
+  const sunMs = Date.parse(today + "T00:00:00Z") + ((7 - dow) % 7) * 86400000;
+  const upcomingSunday = new Date(sunMs).toISOString().slice(0, 10);
   const upper = dataMax >= upcomingSunday ? dataMax : upcomingSunday;
   const full = continuousDates(lower, upper);
 
   // 과거가 쌓여도 탭이 길어지지 않게 최근 약 3주치만 노출 (미래는 유지)
-  const cutoff = new Date(today + "T00:00:00").getTime() - MAX_TAB_DAYS * 86400000;
-  let dates = full.filter(d => new Date(d + "T00:00:00").getTime() >= cutoff);
+  const cutoffISO = new Date(Date.parse(today + "T00:00:00Z") - MAX_TAB_DAYS * 86400000)
+    .toISOString().slice(0, 10);
+  let dates = full.filter(d => d >= cutoffISO);
   if (!dates.length) dates = full.slice(-MAX_TAB_DAYS);
 
   // 기본 선택: 오늘이 있으면 오늘, 없으면 가장 최근 날짜
   selectedDate = dates.includes(today) ? today : dates[dates.length - 1];
 
-  // 업데이트 시각 표시
-  const t = new Date(DATA.fetched_at);
+  // 업데이트 시각 표시 (fetched_at은 KST(+09:00) 저장 → KST 벽시계로 표시)
+  const k = toKst(new Date(DATA.fetched_at));
   document.getElementById("updated").textContent =
-    `업데이트 ${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+    `업데이트 ${k.getUTCMonth() + 1}/${k.getUTCDate()} ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`;
 
   // 정상(최근 3주) 날짜 탭
   normalDates = dates;
@@ -625,7 +635,7 @@ function centerScroll(container, target) {
 
 // 날짜 탭을 그린다. dates=표시할 날짜 배열, dataDates=데이터 있는 날짜 Set
 function buildDayTabs(dates, dataDates) {
-  const today = new Date().toLocaleDateString("sv-SE");
+  const today = kstTodayISO();
   const daysEl = document.getElementById("days");
   daysEl.innerHTML = dates.map(d => {
     const dt = new Date(d + "T00:00:00");
@@ -737,7 +747,8 @@ function backToToday() {
    (10:30 전 = 조식, 15:00 전 = 중식, 그 후 = 석식)
 ──────────────────────────────────────────────── */
 function nextMeal() {
-  const h = new Date().getHours() + new Date().getMinutes() / 60;
+  const k = toKst(new Date());
+  const h = k.getUTCHours() + k.getUTCMinutes() / 60;   // KST 기준 '지금'
   if (h < 10.5) return "조식";
   if (h < 15) return "중식";
   return "석식";
@@ -770,7 +781,7 @@ function cornerHtml(m, highlight) {
 function classifyCorners(restaurant) {
   // 최근 평일(월~금) 최대 10일치만 사용
   const dates = [...new Set(restaurant.menus.map(m => m.date))]
-    .filter(d => { const wd = new Date(d + "T00:00:00").getDay(); return wd >= 1 && wd <= 5; })
+    .filter(d => { const wd = dowOf(d); return wd >= 1 && wd <= 5; })
     .sort().slice(-10);
   const dateSet = new Set(dates);
 
@@ -793,7 +804,7 @@ function classifyCorners(restaurant) {
 
 function render() {
   const main = document.getElementById("main");
-  const isToday = selectedDate === new Date().toLocaleDateString("sv-SE");
+  const isToday = selectedDate === kstTodayISO();
   const highlight = isToday ? nextMeal() : null;
 
   // 선택 날짜에 어떤 식당도 데이터가 없으면 → 날짜 단위 상태 화면
