@@ -146,6 +146,10 @@
     text-align: center; color: var(--sub);
     padding: 60px 20px; font-size: 15px; line-height: 1.7;
   }
+  .empty .state-title {
+    font-size: 18px; font-weight: 700; color: var(--ink);
+    margin-bottom: 8px;
+  }
   footer {
     max-width: 640px; margin: 0 auto; padding: 0 16px 40px;
     font-size: 12px; color: var(--sub); text-align: center;
@@ -187,6 +191,7 @@
 let DATA = null;
 let selectedDate = null;
 let selectedRestaurant = null;  // 선택된 식당 base 이름
+let DATE_SET = new Set();        // 데이터가 존재하는 날짜 집합
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MAX_TAB_DAYS = 21;  // 탭에 노출할 최근 기간(약 3주)
@@ -220,6 +225,26 @@ function readLastRestaurant() {
   try { return localStorage.getItem(LS_KEY); } catch (e) { return null; }
 }
 
+// fromISO~toISO(포함) 사이 날짜를 하루 간격 연속 배열로 (한국은 DST 없어 안전)
+function continuousDates(fromISO, toISO) {
+  const out = [];
+  const end = new Date(toISO + "T00:00:00").getTime();
+  for (let t = new Date(fromISO + "T00:00:00").getTime(); t <= end; t += 86400000) {
+    out.push(new Date(t).toLocaleDateString("sv-SE"));
+  }
+  return out;
+}
+
+function isWeekend(dateISO) {
+  const wd = new Date(dateISO + "T00:00:00").getDay();
+  return wd === 0 || wd === 6;  // 0=일, 6=토
+}
+// 해당 날짜에 어떤 식당이든 메뉴가 있으면 true
+function dateHasAnyData(dateISO) {
+  return DATA.restaurants.some(r =>
+    r.menus.some(m => m.date === dateISO && m.items.length));
+}
+
 fetch("menus.json")
   .then(res => res.json())
   .then(data => {
@@ -240,15 +265,22 @@ function init() {
   DATA.restaurants.forEach(r =>
     r.menus.forEach(m => dateSet.add(m.date))
   );
+  DATE_SET = dateSet;  // render()에서 '데이터 없는 날' 판별에 사용
   const allDates = [...dateSet].sort();
 
   // 오늘 날짜 (예: "2026-07-10")
   const today = new Date().toLocaleDateString("sv-SE"); // sv-SE 로케일 = YYYY-MM-DD 형식
 
-  // 과거 데이터가 쌓여도 탭이 길어지지 않게 최근 약 3주치만 노출
+  // 데이터 최소~최대(+오늘)까지 빈 날 없이 연속 달력으로 채움 (미래 포함)
+  const lower = allDates.length ? allDates[0] : today;
+  const dataMax = allDates.length ? allDates[allDates.length - 1] : today;
+  const upper = today > dataMax ? today : dataMax;
+  const full = continuousDates(lower, upper);
+
+  // 과거가 쌓여도 탭이 길어지지 않게 최근 약 3주치만 노출 (미래는 유지)
   const cutoff = new Date(today + "T00:00:00").getTime() - MAX_TAB_DAYS * 86400000;
-  let dates = allDates.filter(d => new Date(d + "T00:00:00").getTime() >= cutoff);
-  if (!dates.length) dates = allDates.slice(-MAX_TAB_DAYS);
+  let dates = full.filter(d => new Date(d + "T00:00:00").getTime() >= cutoff);
+  if (!dates.length) dates = full.slice(-MAX_TAB_DAYS);
 
   // 기본 선택: 오늘이 있으면 오늘, 없으면 가장 최근 날짜
   selectedDate = dates.includes(today) ? today : dates[dates.length - 1];
@@ -382,6 +414,21 @@ function render() {
   const isToday = selectedDate === new Date().toLocaleDateString("sv-SE");
   const highlight = isToday ? nextMeal() : null;
 
+  // 선택 날짜에 어떤 식당도 데이터가 없으면 → 날짜 단위 상태 화면
+  // (주말이면 '주말 휴무', 평일이면 '메뉴 정보 없음')
+  if (!dateHasAnyData(selectedDate)) {
+    main.innerHTML = isWeekend(selectedDate)
+      ? `<div class="empty">
+           <div class="state-title">주말 휴무</div>
+           이번 주말은 학식 운영이 없어요.<br>평일에 다시 확인해 주세요.
+         </div>`
+      : `<div class="empty">
+           <div class="state-title">메뉴 정보 없음</div>
+           이 날짜는 아직 메뉴가 등록되지 않았어요.
+         </div>`;
+    return;
+  }
+
   // 선택된 식당 하나만 표시
   const r = DATA.restaurants.find(x => baseName(x.name) === selectedRestaurant)
     || DATA.restaurants[0];
@@ -402,7 +449,7 @@ function render() {
       + (fixed.length
         ? `<div class="section-label">상시 메뉴</div>` + fixed.map(m => cornerHtml(m, highlight)).join("")
         : "")
-    : `<div class="empty">이 날짜에는 ${name} 메뉴가 없어요.<br>주말이거나 휴점일 수 있어요 🌙</div>`;
+    : `<div class="empty">이 날짜에는 ${name} 메뉴가 없어요.</div>`;
 
   main.innerHTML = `
     <section class="restaurant">
