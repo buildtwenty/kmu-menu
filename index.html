@@ -64,7 +64,8 @@
     font-family: inherit; font-size: 13px; line-height: 1.35;
   }
   .day b { display: block; font-size: 15px; }
-  .day.active { background: #fff; color: var(--navy); font-weight: 700; }
+  .day.past { opacity: 0.45; }
+  .day.active { background: #fff; color: var(--navy); font-weight: 700; opacity: 1; }
   .day.today-mark b::after { content: " ·오늘"; font-size: 10px; color: #d97706; }
   .day.active.today-mark b::after { color: #b45309; }
 
@@ -160,6 +161,7 @@ let DATA = null;
 let selectedDate = null;
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+const MAX_TAB_DAYS = 21;  // 탭에 노출할 최근 기간(약 3주)
 
 fetch("menus.json")
   .then(res => res.json())
@@ -181,11 +183,18 @@ function init() {
   DATA.restaurants.forEach(r =>
     r.menus.forEach(m => dateSet.add(m.date))
   );
-  const dates = [...dateSet].sort();
+  const allDates = [...dateSet].sort();
 
   // 오늘 날짜 (예: "2026-07-10")
   const today = new Date().toLocaleDateString("sv-SE"); // sv-SE 로케일 = YYYY-MM-DD 형식
-  selectedDate = dates.includes(today) ? today : dates[0];
+
+  // 과거 데이터가 쌓여도 탭이 길어지지 않게 최근 약 3주치만 노출
+  const cutoff = new Date(today + "T00:00:00").getTime() - MAX_TAB_DAYS * 86400000;
+  let dates = allDates.filter(d => new Date(d + "T00:00:00").getTime() >= cutoff);
+  if (!dates.length) dates = allDates.slice(-MAX_TAB_DAYS);
+
+  // 기본 선택: 오늘이 있으면 오늘, 없으면 가장 최근 날짜
+  selectedDate = dates.includes(today) ? today : dates[dates.length - 1];
 
   // 업데이트 시각 표시
   const t = new Date(DATA.fetched_at);
@@ -197,7 +206,8 @@ function init() {
   daysEl.innerHTML = dates.map(d => {
     const dt = new Date(d + "T00:00:00");
     const isToday = d === today;
-    return `<button class="day ${d === selectedDate ? "active" : ""} ${isToday ? "today-mark" : ""}"
+    const isPast = d < today;  // 지난 날짜는 흐리게 표시
+    return `<button class="day ${d === selectedDate ? "active" : ""} ${isToday ? "today-mark" : ""} ${isPast ? "past" : ""}"
               data-date="${d}">
               <b>${WEEKDAYS[dt.getDay()]}</b>${dt.getMonth() + 1}/${dt.getDate()}
             </button>`;
@@ -210,6 +220,16 @@ function init() {
       render();
     });
   });
+
+  // 열 때 선택된(오늘) 탭이 가로 스크롤의 가운데 오도록 이동
+  // (scrollIntoView는 sticky nav/오프셋부모 영향이 있어, rect로 직접 계산)
+  const activeBtn = daysEl.querySelector(".day.active");
+  if (activeBtn) {
+    const cRect = daysEl.getBoundingClientRect();
+    const bRect = activeBtn.getBoundingClientRect();
+    const delta = (bRect.left - cRect.left) - (daysEl.clientWidth - bRect.width) / 2;
+    daysEl.scrollLeft += delta;
+  }
 
   render();
 }
