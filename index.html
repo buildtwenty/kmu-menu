@@ -35,7 +35,18 @@
     background: var(--navy); color: #fff;
     padding: 22px 16px 14px;
   }
-  header .wrap { max-width: 640px; margin: 0 auto; }
+  header .wrap {
+    max-width: 640px; margin: 0 auto;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .head-text { min-width: 0; }
+  .menu-btn {
+    flex: 0 0 auto;
+    border: none; border-radius: 10px;
+    background: rgba(255,255,255,0.14); color: #fff;
+    width: 40px; height: 40px; font-size: 20px; cursor: pointer;
+  }
+  .menu-btn:hover { background: rgba(255,255,255,0.24); }
   h1 {
     font-family: 'Black Han Sans', Pretendard, sans-serif;
     font-size: 26px; font-weight: 400; letter-spacing: 0.5px;
@@ -60,14 +71,6 @@
     scrollbar-width: none;
   }
   .days::-webkit-scrollbar { display: none; }
-  /* 달력 열기 버튼 (요일 탭 왼쪽) */
-  .cal-btn {
-    flex: 0 0 auto; width: 40px;
-    border: none; border-radius: 10px;
-    background: rgba(255,255,255,0.12); color: #fff;
-    font-size: 18px; cursor: pointer;
-  }
-  .cal-btn:hover { background: rgba(255,255,255,0.22); }
   /* 오늘로 돌아가기 */
   .back-today {
     display: block; margin: 8px auto 0;
@@ -76,6 +79,49 @@
     padding: 5px 14px; font-family: inherit; font-size: 12px; cursor: pointer;
   }
   .back-today[hidden] { display: none; }
+
+  /* ── 햄버거 사이드 서랍 ── */
+  .drawer-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(8, 12, 24, 0.5);
+    display: flex; justify-content: flex-end;
+  }
+  .drawer-overlay[hidden] { display: none; }
+  .drawer {
+    width: 80%; max-width: 320px; height: 100%;
+    background: var(--navy); color: #fff;
+    box-shadow: -10px 0 40px rgba(0,0,0,0.4);
+    display: flex; flex-direction: column; overflow-y: auto;
+    transform: translateX(100%); transition: transform 0.25s ease;
+  }
+  .drawer-overlay.open .drawer { transform: translateX(0); }
+  .drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  .drawer-title { font-size: 16px; font-weight: 700; }
+  .drawer-close {
+    border: none; background: none; color: #fff; font-size: 20px;
+    cursor: pointer; line-height: 1; padding: 4px;
+  }
+  .drawer-nav { padding: 6px 0 24px; }
+  .drawer-item {
+    display: block; width: 100%; box-sizing: border-box; text-align: left;
+    padding: 14px 18px; border: none; background: none; color: #fff;
+    font-family: inherit; font-size: 15px; cursor: pointer; text-decoration: none;
+  }
+  .drawer-item:hover { background: rgba(255,255,255,0.08); }
+  .drawer-details summary { list-style: none; }
+  .drawer-details summary::-webkit-details-marker { display: none; }
+  .drawer-details summary::after { content: "＋"; float: right; opacity: 0.7; }
+  .drawer-details[open] summary::after { content: "－"; }
+  .drawer-panel {
+    padding: 2px 18px 16px; font-size: 13px; line-height: 1.75;
+    color: rgba(255,255,255,0.82);
+  }
+  .drawer-panel a { color: #ffd66b; }
+  .drawer-panel p { margin: 0 0 8px; }
+  .drawer-panel p:last-child { margin-bottom: 0; }
 
   /* ── 달력 팝업 ── */
   .cal-overlay {
@@ -321,19 +367,54 @@
 
 <header>
   <div class="wrap">
-    <h1><span class="bowl">🍚</span> 국민대 오늘의 학식</h1>
-    <div class="updated" id="updated">불러오는 중…</div>
+    <div class="head-text">
+      <h1><span class="bowl">🍚</span> 국민대 오늘의 학식</h1>
+      <div class="updated" id="updated">불러오는 중…</div>
+    </div>
+    <button id="menuBtn" class="menu-btn" aria-label="메뉴 열기">☰</button>
   </div>
 </header>
 
 <nav>
   <div class="days-row">
-    <button id="calBtn" class="cal-btn" aria-label="달력에서 날짜 선택">📅</button>
     <div class="days" id="days"></div>
   </div>
   <div class="rests" id="rests"></div>
   <button id="backToday" class="back-today" hidden>← 오늘로 돌아가기</button>
 </nav>
+
+<div id="drawerOverlay" class="drawer-overlay" hidden>
+  <aside class="drawer" role="dialog" aria-label="메뉴" aria-modal="true">
+    <div class="drawer-head">
+      <span class="drawer-title">메뉴</span>
+      <button id="drawerClose" class="drawer-close" aria-label="닫기">✕</button>
+    </div>
+    <nav class="drawer-nav">
+      <button type="button" class="drawer-item" id="drawerCal">🗓️ 지난 메뉴 보기</button>
+
+      <details class="drawer-details">
+        <summary class="drawer-item">❔ 도움말</summary>
+        <div class="drawer-panel">
+          <p>상단 <b>요일 탭</b>에서 날짜를, 아래 <b>식당 칩</b>에서 식당을 골라 그날 메뉴를 봐요.</p>
+          <p>지난 주 메뉴는 <b>지난 메뉴 보기</b>(달력)에서 날짜를 눌러 확인할 수 있어요.</p>
+          <p>데이터 출처: 국민대학교 ‘오늘의 메뉴’ 페이지. 매일 새벽 자동 갱신 · <span id="helpUpdated">—</span></p>
+          <p>표시되는 <b>칼로리</b>와 <b>메뉴</b>는 추정·참고용이라 실제 운영과 다를 수 있어요.</p>
+        </div>
+      </details>
+
+      <details class="drawer-details">
+        <summary class="drawer-item">🍚 이 사이트는요</summary>
+        <div class="drawer-panel">
+          <p>국민대 학식을 한눈에 보려고 <b>학생이 만든 비공식 서비스</b>예요. 학교와 관련이 없습니다.</p>
+          <p>학교 페이지의 메뉴를 매일 새벽 자동으로 가져와 보여줍니다. 참고용으로 봐주세요.</p>
+        </div>
+      </details>
+
+      <a class="drawer-item" href="https://github.com/vydbswnd/kmu-menu/issues"
+         target="_blank" rel="noopener">✉️ 의견 보내기</a>
+    </nav>
+  </aside>
+</div>
 
 <div id="calOverlay" class="cal-overlay" hidden>
   <div class="cal-modal" role="dialog" aria-label="날짜 선택">
@@ -631,14 +712,17 @@ function init() {
 
   // 업데이트 시각 표시 (fetched_at은 KST(+09:00) 저장 → KST 벽시계로 표시)
   const k = toKst(new Date(DATA.fetched_at));
-  document.getElementById("updated").textContent =
-    `최근 업데이트 ${k.getUTCMonth() + 1}/${k.getUTCDate()} ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`;
+  const updStr = `${k.getUTCMonth() + 1}/${k.getUTCDate()} ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`;
+  document.getElementById("updated").textContent = `최근 업데이트 ${updStr}`;
+  const helpUpd = document.getElementById("helpUpdated");
+  if (helpUpd) helpUpd.textContent = `최근 ${updStr}`;
 
-  // 정상(최근 3주) 날짜 탭
+  // 이번 주 날짜 탭
   normalDates = dates;
   normalDefaultDate = selectedDate;
   buildDayTabs(dates, DATE_SET);
   setupCalendar();
+  setupDrawer();
 
   // 식당 탭 초기화
   const ordered = orderedRestaurants();
@@ -710,13 +794,36 @@ function buildDayTabs(dates, dataDates) {
    과거 탐색: 달력 팝업 + 과거 모드
 ──────────────────────────────────────────────── */
 function setupCalendar() {
-  document.getElementById("calBtn").addEventListener("click", () => openCalendar(selectedDate.slice(0, 7)));
   document.getElementById("calPrev").addEventListener("click", () => { calYm = shiftMonth(calYm, -1); renderCalendar(); });
   document.getElementById("calNext").addEventListener("click", () => { calYm = shiftMonth(calYm, 1); renderCalendar(); });
   document.getElementById("backToday").addEventListener("click", backToToday);
   // 배경(오버레이) 클릭 시 닫기
   const ov = document.getElementById("calOverlay");
   ov.addEventListener("click", e => { if (e.target === ov) closeCalendar(); });
+}
+
+/* ── 햄버거 사이드 서랍 ── */
+function setupDrawer() {
+  document.getElementById("menuBtn").addEventListener("click", openDrawer);
+  document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+  const ov = document.getElementById("drawerOverlay");
+  ov.addEventListener("click", e => { if (e.target === ov) closeDrawer(); });  // 바깥 클릭
+  // '지난 메뉴 보기' → 서랍 닫고 달력(지난 메뉴) 열기
+  document.getElementById("drawerCal").addEventListener("click", () => {
+    closeDrawer();
+    openCalendar(kstTodayISO().slice(0, 7));
+  });
+}
+function openDrawer() {
+  const ov = document.getElementById("drawerOverlay");
+  ov.hidden = false;
+  void ov.offsetWidth;              // 강제 리플로우 → 슬라이드 인 트랜지션 발동
+  ov.classList.add("open");
+}
+function closeDrawer() {
+  const ov = document.getElementById("drawerOverlay");
+  ov.classList.remove("open");
+  setTimeout(() => { ov.hidden = true; }, 250);            // 슬라이드 아웃 후 숨김
 }
 
 function openCalendar(ym) {
