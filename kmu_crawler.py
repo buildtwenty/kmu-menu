@@ -16,6 +16,7 @@ import os
 import re
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import requests
 from bs4 import BeautifulSoup
@@ -24,11 +25,22 @@ URL = "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do"
 MENUS_FILE = "menus.json"
 ARCHIVE_DIR = "archive"        # 월별 보관 파일 폴더 (archive/YYYY-MM.json)
 RECENT_DAYS = 21               # menus.json에 유지할 최근 기간(약 3주)
+KST = ZoneInfo("Asia/Seoul")   # 서버가 어디서 돌든 한국시간으로 기록
+
+
+def kst_now() -> datetime:
+    """현재 시각을 KST(Asia/Seoul) 기준 aware datetime으로. Actions(UTC 서버)에서도 KST."""
+    return datetime.now(KST)
+
+
+def kst_stamp() -> str:
+    """기록용 KST 타임스탬프 (예: '2026-07-11T06:00:00+09:00')."""
+    return kst_now().isoformat(timespec="seconds")
 
 
 def kst_today() -> date:
-    """GitHub Actions는 UTC로 도므로 KST(+9h) 기준 오늘 날짜를 계산."""
-    return (datetime.utcnow() + timedelta(hours=9)).date()
+    """KST 기준 오늘 날짜."""
+    return kst_now().date()
 
 # ── 정규식 패턴들 ──────────────────────────────────────────────
 # 메뉴가 아닌 공지/안내 문구를 걸러내는 패턴
@@ -321,7 +333,7 @@ def save_archive(ym: str, restaurants: list) -> None:
     os.makedirs(ARCHIVE_DIR, exist_ok=True)
     data = {
         "month": ym,
-        "updated_at": datetime.now().isoformat(timespec="seconds"),
+        "updated_at": kst_stamp(),
         "source": URL,
         "restaurants": restaurants,
     }
@@ -383,7 +395,7 @@ def rebuild_recent(today: date) -> list:
 
 def write_menus(restaurants: list) -> None:
     data = {
-        "fetched_at": datetime.now().isoformat(timespec="seconds"),
+        "fetched_at": kst_stamp(),
         "source": URL,
         "restaurants": restaurants,
     }
