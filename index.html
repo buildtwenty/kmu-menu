@@ -29,6 +29,9 @@
     background: var(--bg); color: var(--ink);
     -webkit-font-smoothing: antialiased;
   }
+  /* 안드로이드 등에서 둥근 요소 뒤로 번쩍이는 사각 tap highlight 제거.
+     (터치 영역이 시각 모양보다 커서 생기던 것 — 눌림 피드백은 :active로 대체) */
+  button, a, summary { -webkit-tap-highlight-color: transparent; }
 
   /* ── 상단 헤더 ── */
   header {
@@ -491,6 +494,22 @@
     font-size: 12px; color: var(--sub); text-align: center;
   }
   footer a { color: var(--sub); }
+
+  /* ── 눌림 피드백 (사각 tap-highlight 대신 요소 자체가 미세하게 눌림) ── */
+  .chip, .day, .meal-btn, .menu-btn {
+    transition: transform 0.1s ease, background-color 0.12s ease;
+  }
+  .chip:active, .day:active, .meal-btn:active, .menu-btn:active {
+    transform: scale(0.97);
+  }
+  /* 배경 살짝 변화: 반투명 요소는 밝게, 밝은/강조 요소는 어둡게 */
+  .menu-btn:active { background: rgba(255,255,255,0.28); }
+  .chip:active { background: rgba(255,255,255,0.24); }
+  .chip.active:active { background: #f4c53f; }        /* 노란 활성 칩 → 살짝 어둡게 */
+  .day:active { background: rgba(255,255,255,0.24); }
+  .day.active:active { background: #eef1f7; }          /* 흰 활성 탭 → 살짝 회색 */
+  .meal-btn:active { background: var(--bg); }
+  .meal-btn.hl:active { background: #0c2247; }          /* 남색 강조 → 더 어둡게 */
 
   /* ── 이스터에그 ── */
   /* 로고(🍚) 5연타용: 탭 영역 표시 없이 눌리게만 */
