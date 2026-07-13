@@ -151,24 +151,48 @@
     cursor: pointer; line-height: 1; padding: 4px;
   }
   .sheet-list { padding: 4px 12px 12px; }
-  .sheet-item {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    width: 100%; box-sizing: border-box; text-align: left;
+  /* 식당 행: 테두리·강조는 행 컨테이너가 담당(안에 끼니 펼침이 들어감) */
+  .sheet-row {
     border: 1px solid var(--line); border-radius: 12px;
-    background: var(--card); color: var(--ink);
-    padding: 14px 16px; margin-top: 8px;
+    background: var(--card); margin-top: 8px; overflow: hidden;
+  }
+  /* 지금 보고 있는 식당 = 강조(사실상 기본값) */
+  .sheet-row.current-row { border-color: var(--navy); background: var(--navy-soft); }
+  .sheet-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; box-sizing: border-box; text-align: left;
+    border: none; background: none; color: var(--ink);
+    padding: 14px 16px;
     font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
   }
   .sheet-item:hover { background: var(--bg); }
-  .sheet-item .s-loc { font-size: 12px; color: var(--sub); font-weight: 400; }
-  /* 지금 보고 있는 식당 = 강조(사실상 기본값) */
-  .sheet-item.current { border-color: var(--navy); background: var(--navy-soft); }
-  .sheet-item.current:hover { background: #dfe7f5; }
+  .sheet-row.current-row .sheet-item:hover { background: #dfe7f5; }
+  .s-name { flex: 1; min-width: 0; }
+  .s-name .s-loc { font-size: 12px; color: var(--sub); font-weight: 400; }
   .s-badge {
     flex: 0 0 auto;
     font-size: 11px; font-weight: 700; color: #fff; background: var(--navy);
     border-radius: 999px; padding: 3px 9px;
   }
+  .chev { flex: 0 0 auto; color: var(--sub); font-size: 13px; transition: transform 0.2s; }
+  .sheet-row.open .chev { transform: rotate(180deg); }
+  /* 끼니 선택 영역 */
+  .meal-wrap[hidden] { display: none; }
+  .meal-choices {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 2px 14px 14px;
+  }
+  .meal-solo .meal-choices { padding: 6px 4px 8px; }
+  .meal-btn {
+    flex: 0 0 auto;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--card); color: var(--ink);
+    padding: 9px 18px; font-family: inherit; font-size: 14px; font-weight: 700;
+    cursor: pointer;
+  }
+  .meal-btn:hover { background: var(--bg); }
+  /* 다가오는 끼니 = 기본 강조 */
+  .meal-btn.hl { border-color: var(--navy); background: var(--navy); color: #fff; }
 
   /* ── 달력 팝업 ── */
   .cal-overlay {
@@ -470,7 +494,7 @@
 <div id="shareOverlay" class="sheet-overlay" hidden>
   <div class="sheet" role="dialog" aria-label="공유할 식당 선택" aria-modal="true">
     <div class="sheet-head">
-      <span class="sheet-title">어느 식당을 공유할까요?</span>
+      <span class="sheet-title" id="shareTitle">어느 식당을 공유할까요?</span>
       <button id="shareClose" class="sheet-close" aria-label="닫기">✕</button>
     </div>
     <div class="sheet-list" id="shareList"></div>
@@ -1033,31 +1057,60 @@ function classifyCorners(restaurant) {
 }
 
 /* ────────────────────────────────────────────────
-   공유하기: 식당을 고른 뒤 그 식당 메뉴를 짧은 텍스트로
+   공유하기: 식당 선택 → 끼니 선택 → 텍스트 생성
 ──────────────────────────────────────────────── */
 const SHARE_URL = "https://buildtwenty.github.io/kmu-menu";
+const MEAL_ORDER = ["조식", "중식", "석식"];
 
 // 선택 날짜에 메뉴가 있는 식당 목록(정렬됨). 없으면 빈 배열.
 function shareableRestaurants(dateISO) {
   return orderBy(restaurantsForDate(dateISO))
     .filter(r => r.menus.some(m => m.date === dateISO && m.items.length));
 }
+// 코너(menu 항목)가 특정 끼니에 속하는지. "전체"는 모두 포함,
+// meal=null 코너는 "전체"에만, "중식/석식"은 중식·석식 양쪽에 포함.
+function cornerInMeal(m, meal) {
+  if (meal === "전체") return true;
+  if (!m.meal) return false;
+  return m.meal.split("/").includes(meal);
+}
+// 식당+날짜에 실제 존재하는 끼니 목록(조식→중식→석식 순, null 제외)
+function mealsOf(r, dateISO) {
+  const present = new Set();
+  r.menus.forEach(m => {
+    if (m.date !== dateISO || !m.items.length || !m.meal) return;
+    m.meal.split("/").forEach(x => present.add(x));
+  });
+  return MEAL_ORDER.filter(x => present.has(x));
+}
+function hasNullMeal(r, dateISO) {
+  return r.menus.some(m => m.date === dateISO && m.items.length && !m.meal);
+}
+// 끼니 선택 없이 바로 공유해도 되는 식당인가(끼니 구분이 없거나 하나뿐)
+function bypassMealOf(r, dateISO) {
+  const meals = mealsOf(r, dateISO);
+  if (meals.length === 0) return "전체";                       // 전부 null → 전체
+  if (meals.length === 1 && !hasNullMeal(r, dateISO)) return meals[0];  // 끼니 하나뿐
+  return null;                                                  // 끼니 선택 필요
+}
 
-// 특정 식당 기준 공유 텍스트. 메뉴가 없으면 null.
-function buildShareTextForRestaurant(restName) {
+// 특정 식당·끼니 기준 공유 텍스트. 해당 메뉴가 없으면 null.
+function buildShareText(restName, meal) {
   const dateISO = selectedDate;
   const r = restaurantsForDate(dateISO).find(x => baseName(x.name) === restName);
   if (!r) return null;
-  const menus = r.menus.filter(m => m.date === dateISO && m.items.length);
+  const menus = r.menus.filter(m =>
+    m.date === dateISO && m.items.length && cornerInMeal(m, meal));
   if (!menus.length) return null;
 
   const dt = new Date(dateISO + "T00:00:00Z");
   const md = `${dt.getUTCMonth() + 1}/${dt.getUTCDate()}`;
   const dow = WEEKDAYS[dt.getUTCDay()];
   const isToday = dateISO === kstTodayISO();
-  // 오늘이면 '오늘 메뉴', 다른 날은 그냥 '메뉴' (날짜는 괄호에 이미 있음)
-  const header = `🍚 [${baseName(r.name)}] ${isToday ? "오늘 메뉴" : "메뉴"} (${md} ${dow})`;
-  const footer = `다른 식당도 → ${SHARE_URL}`;
+  // 특정 끼니면 끼니명, '전체'면 끼니 표기 생략(오늘이면 '오늘 메뉴')
+  const label = (meal && meal !== "전체") ? meal : (isToday ? "오늘 메뉴" : "메뉴");
+  const header = `🍚 [${baseName(r.name)}] ${label} (${md} ${dow})`;
+  const footer = `다른 메뉴도 → ${SHARE_URL}`;
   const MAX = 500;
 
   // 매일 바뀌는 코너를 앞에, 상시(고정) 코너는 뒤로
@@ -1082,16 +1135,52 @@ function buildShareTextForRestaurant(restName) {
   return `${header}\n\n${bodyLines.join("\n")}\n\n${footer}`;
 }
 
-// 공유 버튼: 메뉴 있는 식당이 여럿이면 선택창, 하나면 바로 공유, 없으면 안내
+// 공유 버튼: 식당 여럿이면 선택창, 하나면 식당 선택 생략, 없으면 안내
 function shareMenu() {
   const avail = shareableRestaurants(selectedDate);
   if (!avail.length) { showToast("이 날은 공유할 메뉴가 없어요"); return; }
-  if (avail.length === 1) { shareRestaurant(baseName(avail[0].name)); return; }
+  if (avail.length === 1) { startRestaurant(avail[0], true); return; }
   openSharePicker(avail);
 }
 
-// 식당 선택창(바텀시트) 열기: 지금 보는 식당을 맨 위에 + 강조
+// 식당 하나가 정해졌을 때: 끼니 선택이 필요하면 시트/펼침, 아니면 바로 공유
+// solo=true(식당 하나뿐)면 끼니만 고르는 시트를 연다.
+function startRestaurant(r, solo) {
+  const bypass = bypassMealOf(r, selectedDate);
+  if (bypass) { shareRestaurant(baseName(r.name), bypass); return; }
+  if (solo) openMealPicker(r);
+}
+
+// 끼니 버튼들 HTML (다가오는 끼니를 기본 강조)
+function mealButtonsHtml(r) {
+  const n = baseName(r.name);
+  const opts = ["전체", ...mealsOf(r, selectedDate)];
+  const nm = (selectedDate === kstTodayISO()) ? nextMeal() : null;
+  const hl = (nm && opts.includes(nm)) ? nm : "전체";   // 다가오는 끼니, 없으면 전체
+  return `<div class="meal-choices">` + opts.map(o =>
+    `<button class="meal-btn ${o === hl ? "hl" : ""}" data-rest="${n}" data-meal="${o}">${o}</button>`
+  ).join("") + `</div>`;
+}
+function bindMealButtons(container) {
+  container.querySelectorAll(".meal-btn").forEach(b =>
+    b.addEventListener("click", () => {
+      closeSharePicker();
+      shareRestaurant(b.dataset.rest, b.dataset.meal);
+    }));
+}
+
+// 단일 식당: 끼니만 고르는 시트
+function openMealPicker(r) {
+  document.getElementById("shareTitle").textContent = "어느 끼니를 공유할까요?";
+  const listEl = document.getElementById("shareList");
+  listEl.innerHTML = `<div class="meal-solo">${mealButtonsHtml(r)}</div>`;
+  bindMealButtons(listEl);
+  openSheet();
+}
+
+// 식당 선택창(바텀시트): 지금 보는 식당을 맨 위 + 강조, 누르면 끼니 펼침
 function openSharePicker(list) {
+  document.getElementById("shareTitle").textContent = "어느 식당을 공유할까요?";
   const cur = selectedRestaurant;
   // 지금 보는 식당을 맨 앞으로 (그 외에는 orderBy 순서 유지 — 안정 정렬)
   const ordered = [...list].sort((a, b) =>
@@ -1103,17 +1192,52 @@ function openSharePicker(list) {
     const isCur = n === cur;
     const lm = r.name.match(/\((.*)\)$/);
     const loc = lm ? lm[1] : "";
-    return `<button class="sheet-item ${isCur ? "current" : ""}" data-rest="${n}">
-        <span class="s-name">${n}${loc ? ` <span class="s-loc">${loc}</span>` : ""}</span>
-        ${isCur ? `<span class="s-badge">보는 중</span>` : ""}
-      </button>`;
+    const expandable = !bypassMealOf(r, selectedDate);   // 끼니 선택 필요 = 펼쳐짐
+    return `<div class="sheet-row ${isCur ? "current-row" : ""}" data-rest="${n}">
+        <button class="sheet-item" data-rest="${n}" data-expandable="${expandable ? 1 : 0}">
+          <span class="s-name">${n}${loc ? ` <span class="s-loc">${loc}</span>` : ""}</span>
+          ${isCur ? `<span class="s-badge">보는 중</span>` : ""}
+          ${expandable ? `<span class="chev">▾</span>` : ""}
+        </button>
+        <div class="meal-wrap" hidden></div>
+      </div>`;
   }).join("");
-  listEl.querySelectorAll(".sheet-item").forEach(btn =>
-    btn.addEventListener("click", () => {
-      closeSharePicker();
-      shareRestaurant(btn.dataset.rest);
-    }));
 
+  listEl.querySelectorAll(".sheet-item").forEach(btn =>
+    btn.addEventListener("click", () => onRowClick(btn, ordered)));
+
+  openSheet();
+}
+
+// 식당 행 클릭: 바로공유 대상이면 공유, 아니면 끼니 펼침(다른 행은 접힘)
+function onRowClick(btn, ordered) {
+  const restName = btn.dataset.rest;
+  if (btn.dataset.expandable !== "1") {
+    closeSharePicker();
+    shareRestaurant(restName, bypassMealOf(
+      ordered.find(x => baseName(x.name) === restName), selectedDate) || "전체");
+    return;
+  }
+  const listEl = document.getElementById("shareList");
+  const row = btn.closest(".sheet-row");
+  const wrap = row.querySelector(".meal-wrap");
+  const willOpen = wrap.hidden;
+  // 전부 접기
+  listEl.querySelectorAll(".meal-wrap").forEach(w => { w.hidden = true; });
+  listEl.querySelectorAll(".sheet-row").forEach(rw => rw.classList.remove("open"));
+  if (willOpen) {
+    if (!wrap.dataset.built) {
+      const r = ordered.find(x => baseName(x.name) === restName);
+      wrap.innerHTML = mealButtonsHtml(r);
+      bindMealButtons(wrap);
+      wrap.dataset.built = "1";
+    }
+    wrap.hidden = false;
+    row.classList.add("open");
+  }
+}
+
+function openSheet() {
   const ov = document.getElementById("shareOverlay");
   ov.hidden = false;
   void ov.offsetWidth;               // 리플로우 → 슬라이드 업 트랜지션
@@ -1125,9 +1249,9 @@ function closeSharePicker() {
   setTimeout(() => { ov.hidden = true; }, 250);
 }
 
-// 고른 식당을 공유: Web Share 지원 시 OS 공유창, 아니면 클립보드 복사 + 토스트
-async function shareRestaurant(restName) {
-  const text = buildShareTextForRestaurant(restName);
+// 고른 식당·끼니를 공유: Web Share 지원 시 OS 공유창, 아니면 클립보드 복사 + 토스트
+async function shareRestaurant(restName, meal) {
+  const text = buildShareText(restName, meal);
   if (!text) { showToast("이 날은 공유할 메뉴가 없어요"); return; }
 
   if (navigator.share) {
