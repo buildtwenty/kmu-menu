@@ -14,7 +14,7 @@
     --navy: #0f2b5b;        /* 국민대 남색 */
     --navy-soft: #eaeff8;
     --ink: #1c1e24;
-    --sub: #6b7280;
+    --sub: #5a6273;   /* 작은 회색 텍스트: AA 여유 있게 한 톤 진하게 (흰 배경 6.1:1) */
     --line: #e6e8ee;
     --bg: #f6f7fa;
     --card: #ffffff;
@@ -491,9 +491,14 @@
   }
   footer {
     max-width: 640px; margin: 0 auto; padding: 0 16px 40px;
-    font-size: 12px; color: var(--sub); text-align: center;
+    font-size: 12px; color: var(--sub); text-align: center; line-height: 1.6;
   }
-  footer a { color: var(--sub); }
+  footer a { color: var(--sub); text-decoration: underline; }
+  /* 푸터 구분선: 가운데 정렬 36px 얇은 선, 위아래 12px 여백 */
+  .foot-div {
+    width: 36px; height: 1px; border: 0;
+    background: #cfd5df; margin: 12px auto;
+  }
 
   /* ── 눌림 피드백 (사각 tap-highlight 대신 요소 자체가 미세하게 눌림) ── */
   .chip, .day, .meal-btn, .menu-btn {
@@ -657,8 +662,9 @@
 
 <footer>
   메뉴는 매일 새벽 자동 갱신됩니다. 실제 운영과 다를 수 있어요.<br>
-  출처: 국민대학교 오늘의 메뉴<br>
-  익명 방문 통계를 수집합니다.
+  출처: 국민대학교 오늘의 메뉴 · 익명 방문 통계를 수집합니다.
+  <hr class="foot-div">
+  문의 <a href="mailto:teambuildtwenty@gmail.com">teambuildtwenty@gmail.com</a>
 </footer>
 
 <script>
