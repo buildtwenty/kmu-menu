@@ -1,6 +1,6 @@
 {
   "month": "2026-07",
-  "updated_at": "2026-07-13T06:52:05+09:00",
+  "updated_at": "2026-07-14T00:56:36+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -636,7 +636,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "해물순두부덮밥 생선가스/타르타르 ㅂ",
+              "name": "해물순두부덮밥 생선가스/타르타르",
               "price": 4900
             }
           ]
@@ -1411,7 +1411,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "참치생야채비빔밥 쥬시쿨",
+              "name": "참치생야채비빔밥 요구르트",
               "price": 3900
             }
           ]
