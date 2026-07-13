@@ -845,39 +845,6 @@
               "price": 6000
             }
           ]
-        },
-        {
-          "date": "2026-07-17",
-          "corner": "1코너 SNACK2",
-          "meal": null,
-          "items": [
-            {
-              "name": "제헌절",
-              "price": null
-            }
-          ]
-        },
-        {
-          "date": "2026-07-17",
-          "corner": "3코너 CUTLET",
-          "meal": null,
-          "items": [
-            {
-              "name": "제헌절",
-              "price": null
-            }
-          ]
-        },
-        {
-          "date": "2026-07-17",
-          "corner": "5코너 GUKBAP.Chef",
-          "meal": null,
-          "items": [
-            {
-              "name": "제헌절",
-              "price": null
-            }
-          ]
         }
       ],
       "hours": [
@@ -1585,17 +1552,6 @@
           ]
         },
         {
-          "date": "2026-07-06",
-          "corner": "석식",
-          "meal": "석식",
-          "items": [
-            {
-              "name": "학생식당 이용 부탁드립니다.",
-              "price": null
-            }
-          ]
-        },
-        {
           "date": "2026-07-07",
           "corner": "키친1",
           "meal": null,
@@ -1756,17 +1712,6 @@
           "items": [
             {
               "name": "헬시그린샐러드 샐러드토핑&드레싱 병아리콩샐러드 현미밥&석류주스",
-              "price": null
-            }
-          ]
-        },
-        {
-          "date": "2026-07-13",
-          "corner": "석식",
-          "meal": "석식",
-          "items": [
-            {
-              "name": "학생식당 이용 부탁드립니다.",
               "price": null
             }
           ]
