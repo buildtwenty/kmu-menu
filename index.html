@@ -440,6 +440,34 @@
   }
   .kcal-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+  /* ── 로딩 스켈레톤 (카드 뼈대) ── */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .skeleton {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .skel-head { padding: 16px; }
+  .skel-body { border-top: 1px solid var(--line); padding: 6px 16px 14px; }
+  .skel-corner { padding: 14px 0; }
+  .skel-corner + .skel-corner { border-top: 1px dashed var(--line); }
+  .skel-bar { background: #e9ecf2; border-radius: 7px; height: 14px; }
+  .skel-title { width: 42%; height: 20px; margin-bottom: 10px; }
+  .skel-sub   { width: 58%; height: 12px; }
+  .skel-label { width: 30%; height: 12px; margin-bottom: 12px; }
+  .skel-line  { width: 88%; height: 16px; margin-bottom: 10px; }
+  .skel-price { width: 22%; height: 15px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .skel-bar {
+      background: linear-gradient(90deg, #e9ecf2 25%, #f1f3f8 37%, #e9ecf2 63%);
+      background-size: 400% 100%;
+      animation: skelShimmer 1.3s ease infinite;
+    }
+    @keyframes skelShimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+  }
+
   .empty {
     text-align: center; color: var(--sub);
     padding: 60px 20px; font-size: 15px; line-height: 1.7;
@@ -574,7 +602,32 @@
   </div>
 </div>
 
-<main id="main"><div class="empty">메뉴를 불러오는 중이에요…</div></main>
+<main id="main" aria-busy="true">
+  <span class="sr-only">메뉴를 불러오는 중이에요…</span>
+  <div class="skeleton" aria-hidden="true">
+    <div class="skel-head">
+      <div class="skel-bar skel-title"></div>
+      <div class="skel-bar skel-sub"></div>
+    </div>
+    <div class="skel-body">
+      <div class="skel-corner">
+        <div class="skel-bar skel-label"></div>
+        <div class="skel-bar skel-line"></div>
+        <div class="skel-bar skel-price"></div>
+      </div>
+      <div class="skel-corner">
+        <div class="skel-bar skel-label"></div>
+        <div class="skel-bar skel-line"></div>
+        <div class="skel-bar skel-price"></div>
+      </div>
+      <div class="skel-corner">
+        <div class="skel-bar skel-label"></div>
+        <div class="skel-bar skel-line"></div>
+        <div class="skel-bar skel-price"></div>
+      </div>
+    </div>
+  </div>
+</main>
 
 <footer>
   메뉴는 매일 새벽 자동 갱신됩니다. 실제 운영과 다를 수 있어요.<br>
@@ -835,7 +888,9 @@ Promise.all([
     init();
   })
   .catch(() => {
-    document.getElementById("main").innerHTML =
+    const main = document.getElementById("main");
+    main.removeAttribute("aria-busy");
+    main.innerHTML =
       '<div class="empty">메뉴를 불러오지 못했어요 😢<br>잠시 후 새로고침 해주세요.</div>';
   });
 
@@ -1362,6 +1417,7 @@ async function shareRestaurant(restName, meal) {
 
 function render() {
   const main = document.getElementById("main");
+  main.removeAttribute("aria-busy");   // 로딩 스켈레톤 종료
   const isToday = selectedDate === kstTodayISO();
   const highlight = isToday ? nextMeal() : null;
 
