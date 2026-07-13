@@ -1127,6 +1127,7 @@ function buildShareText(restName, meal) {
   const label = (meal && meal !== "전체") ? meal : (isToday ? "오늘 메뉴" : "메뉴");
   const header = `🍚 ${baseName(r.name)} ${label} (${md} ${dow})`;
   const footer = `다른 메뉴도 → ${SHARE_URL}`;
+  const SEP = "―――";      // 코너 줄 사이 구분선 (코너 2개 이상일 때만)
   const MAX = 500;
 
   // 매일 바뀌는 코너를 앞에, 상시(고정) 코너는 뒤로
@@ -1143,13 +1144,15 @@ function buildShareText(restName, meal) {
     const dish = mainDish(item.name);                       // 세트 구성품 생략
     // 형식: "코너명 · 대표메뉴 가격" (코너명 없으면 메뉴만)
     const line = m.corner ? `${m.corner} · ${dish}${price}` : `${dish}${price}`;
-    if (used + line.length + 1 > MAX) break;       // 500자 넘으면 멈춤
+    const sep = bodyLines.length ? SEP.length + 1 : 0;      // 앞 줄과의 구분선 비용
+    if (used + sep + line.length + 1 > MAX) break;  // 500자 넘으면 멈춤
     bodyLines.push(line);
-    used += line.length + 1;
+    used += sep + line.length + 1;
   }
 
   if (!bodyLines.length) return null;
-  return `${header}\n\n${bodyLines.join("\n")}\n\n${footer}`;
+  // 코너가 2개 이상이면 줄 사이에 구분선, 하나면 그대로
+  return `${header}\n\n${bodyLines.join(`\n${SEP}\n`)}\n\n${footer}`;
 }
 
 // 공유 버튼: 식당 여럿이면 선택창, 하나면 식당 선택 생략, 없으면 안내
