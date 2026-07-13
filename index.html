@@ -428,6 +428,26 @@
   }
   footer a { color: var(--sub); }
 
+  /* ── 이스터에그 ── */
+  /* 로고(🍚) 5연타용: 탭 영역 표시 없이 눌리게만 */
+  h1 .bowl {
+    cursor: pointer; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* 치킨 메뉴 탭 시 톡 튀어오르는 🍗 */
+  .chicken-pop {
+    position: fixed; z-index: 300;
+    font-size: 30px; line-height: 1; pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: chickenPop 0.5s ease-out forwards;
+    will-change: transform, opacity;
+  }
+  @keyframes chickenPop {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    30%  { opacity: 1; transform: translate(-50%, -115%) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%, -190%) scale(0.9); }
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .restaurant { animation: rise 0.25s ease both; }
     @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
@@ -1369,6 +1389,60 @@ function render() {
       <div class="body">${body}</div>
     </section>`;
 }
+
+/* ────────────────────────────────────────────────
+   5) 이스터에그 3종 (스크립트가 body 끝에 있어 DOM 준비됨)
+──────────────────────────────────────────────── */
+// 1) 콘솔 서명: F12 콘솔에 인사말
+function printConsoleSignature() {
+  try {
+    console.log(
+      "%c🍚 국민대 학식을 뜯어보러 오셨군요. Made by buildtwenty.\n"
+      + "%c코드가 궁금하면 github.com/buildtwenty/kmu-menu",
+      "font-size:14px;font-weight:bold;color:#0f2b5b",
+      "font-size:12px;color:#6b7280"
+    );
+  } catch (e) {}
+}
+
+// 2) 로고 5연타: 헤더의 🍚를 800ms 안에 이어 5번 탭하면 크레딧 토스트
+function setupLogoEasterEgg() {
+  const bowl = document.querySelector("h1 .bowl");
+  if (!bowl) return;
+  let count = 0, last = 0;
+  bowl.addEventListener("click", () => {
+    const now = Date.now();
+    count = (now - last < 800) ? count + 1 : 1;   // 끊기면 처음부터
+    last = now;
+    if (count >= 5) {
+      count = 0;
+      showToast("🔧 기계과가 만들었습니다 · 2026 · buildtwenty", 3000);
+    }
+  });
+}
+
+// 3) 치킨 반응: 이름에 '치킨'이 든 메뉴를 탭하면 그 자리에서 🍗가 톡 튀어오름
+function setupChickenEasterEgg() {
+  const main = document.getElementById("main");
+  if (!main) return;
+  main.addEventListener("click", e => {
+    const item = e.target.closest(".item");
+    if (!item) return;
+    const nameEl = item.querySelector(".menu-name");
+    if (!nameEl || !nameEl.textContent.includes("치킨")) return;
+    const el = document.createElement("div");
+    el.className = "chicken-pop";
+    el.textContent = "🍗";
+    el.style.left = e.clientX + "px";
+    el.style.top = e.clientY + "px";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 550);   // 애니메이션(0.5s) 후 정리
+  });
+}
+
+printConsoleSignature();
+setupLogoEasterEgg();
+setupChickenEasterEgg();
 </script>
 
 <!-- 익명 방문 통계 (GoatCounter, 비공개 · 화면 표시 없음) -->
