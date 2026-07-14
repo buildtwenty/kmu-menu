@@ -78,12 +78,17 @@
     scrollbar-width: none;
   }
   .days::-webkit-scrollbar { display: none; }
-  /* 가로 스크롤 힌트: 오른쪽 끝을 남색으로 페이드 (더 있음을 암시) */
-  .days-row::after {
-    content: ""; position: absolute; top: 0; bottom: 0; right: 0;
+  /* 가로 스크롤 힌트: 넘칠 때만, 넘치는 쪽 끝을 남색으로 페이드.
+     끝까지 스크롤하면 그쪽 페이드가 사라진다(JS가 can-left/can-right 토글). */
+  .days-row::before, .days-row::after {
+    content: ""; position: absolute; top: 0; bottom: 0;
     width: 28px; pointer-events: none;
-    background: linear-gradient(to right, rgba(15,43,91,0), var(--navy));
+    opacity: 0; transition: opacity 0.15s ease;
   }
+  .days-row::before { left: 0;  background: linear-gradient(to left,  rgba(15,43,91,0), var(--navy)); }
+  .days-row::after  { right: 0; background: linear-gradient(to right, rgba(15,43,91,0), var(--navy)); }
+  .days-row.can-left::before { opacity: 1; }
+  .days-row.can-right::after { opacity: 1; }
   /* 오늘로 돌아가기 */
   .back-today {
     display: flex; align-items: center; justify-content: center;
@@ -303,12 +308,16 @@
     scrollbar-width: none;
   }
   .rests::-webkit-scrollbar { display: none; }
-  /* 가로 스크롤 힌트: 오른쪽 끝 페이드 */
-  .rests-wrap::after {
-    content: ""; position: absolute; top: 0; bottom: 0; right: 0;
+  /* 가로 스크롤 힌트: 넘칠 때만, 넘치는 쪽 끝 페이드 (JS가 can-left/can-right 토글) */
+  .rests-wrap::before, .rests-wrap::after {
+    content: ""; position: absolute; top: 0; bottom: 0;
     width: 28px; pointer-events: none;
-    background: linear-gradient(to right, rgba(15,43,91,0), var(--navy));
+    opacity: 0; transition: opacity 0.15s ease;
   }
+  .rests-wrap::before { left: 0;  background: linear-gradient(to left,  rgba(15,43,91,0), var(--navy)); }
+  .rests-wrap::after  { right: 0; background: linear-gradient(to right, rgba(15,43,91,0), var(--navy)); }
+  .rests-wrap.can-left::before { opacity: 1; }
+  .rests-wrap.can-right::after { opacity: 1; }
   .chip {
     flex: 0 0 auto; border: none; border-radius: 999px;
     display: inline-flex; align-items: center; min-height: 44px;
@@ -997,6 +1006,8 @@ function init() {
     });
   });
   centerScroll(restsEl, restsEl.querySelector(".chip.active"));
+  setupScrollFades();
+  refreshFades();
 
   // kcal 토글 상태 복원 (기본 꺼짐)
   calOn = readKcalOn();
@@ -1012,6 +1023,32 @@ function centerScroll(container, target) {
   const bRect = target.getBoundingClientRect();
   const delta = (bRect.left - cRect.left) - (container.clientWidth - bRect.width) / 2;
   container.scrollLeft += delta;
+}
+
+// ── 가로 스크롤 페이드: 실제로 넘칠 때만, 넘치는 쪽에만 표시 ──
+// (scrollEl = 스크롤 컨테이너, wrapEl = 페이드를 그리는 relative 부모)
+function updateFade(scrollEl, wrapEl) {
+  if (!scrollEl || !wrapEl) return;
+  const max = scrollEl.scrollWidth - scrollEl.clientWidth;
+  const x = scrollEl.scrollLeft;
+  wrapEl.classList.toggle("can-left", x > 1);          // 시작보다 오른쪽 → 왼쪽 페이드
+  wrapEl.classList.toggle("can-right", x < max - 1);   // 끝보다 왼쪽 → 오른쪽 페이드
+}
+function fadePairs() {
+  return [
+    [document.getElementById("days"), document.querySelector(".days-row")],
+    [document.getElementById("rests"), document.getElementById("restsWrap")],
+  ];
+}
+function refreshFades() { fadePairs().forEach(([s, w]) => updateFade(s, w)); }
+function setupScrollFades() {
+  fadePairs().forEach(([s, w]) => {
+    if (s) s.addEventListener("scroll", () => updateFade(s, w), { passive: true });
+  });
+  window.addEventListener("resize", refreshFades);
+  window.addEventListener("load", refreshFades);            // 레이아웃 확정 후 한 번 더
+  // 웹폰트 로딩으로 폭이 바뀌면 다시 계산 (초기 오버플로 오판 방지)
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refreshFades);
 }
 
 // 날짜 탭을 그린다. dates=표시할 날짜 배열, dataDates=데이터 있는 날짜 Set
@@ -1042,6 +1079,7 @@ function buildDayTabs(dates, dataDates) {
     });
   });
   centerScroll(daysEl, activeBtnOf(daysEl));
+  refreshFades();
 }
 
 /* ────────────────────────────────────────────────
@@ -1537,6 +1575,8 @@ function render() {
       </div>
       <div class="body">${body}</div>
     </section>`;
+
+  refreshFades();   // 식당 칩 줄이 다시 보이거나 폭이 바뀌었을 수 있어 페이드 재계산
 }
 
 /* ────────────────────────────────────────────────
