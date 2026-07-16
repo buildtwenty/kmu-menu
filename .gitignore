@@ -4,3 +4,7 @@ venv/
 .venv/
 unmatched.md
 crawl_stats.json
+
+# 방어용 (현재 쓰지 않지만 실수 커밋 방지)
+.env
+.DS_Store
