@@ -741,16 +741,22 @@ function readKcalOn() {
   try { return localStorage.getItem(KCAL_KEY) === "1"; } catch (e) { return false; }
 }
 // 메뉴명에 포함되는 키워드 중 '가장 긴' 것을 골라 [min,max] 반환 (없으면 null)
+// 세트 메뉴는 "메인요리 밥 국 반찬 … /그린샐러드·주스" 순서라 앞 토큰이 메인이다.
+// 키워드가 걸리는 '첫 토큰'을 메인으로 보고, 그 토큰 안에서 가장 긴 키워드를 고른다.
+// (전역 최장일치는 뒤에 붙는 긴 사이드 키워드 '그린샐러드'(5자) 등이 매일 메인을 가림)
 function matchCalorie(name) {
   if (!CAL) return null;
-  let best = null;
-  for (const k in CAL) {
-    if (k[0] === "_") continue;               // _comment 등 메타 키 제외
-    if (name.indexOf(k) >= 0 && (!best || k.length > best.k.length)) {
-      best = { k, v: CAL[k] };
+  for (const tok of name.split(/[\s/]+/)) {
+    let best = null;
+    for (const k in CAL) {
+      if (k[0] === "_") continue;             // _comment 등 메타 키 제외
+      if (tok.indexOf(k) >= 0 && (!best || k.length > best.k.length)) {
+        best = { k, v: CAL[k] };
+      }
     }
+    if (best) return best.v;                   // 키워드 걸린 첫 토큰 = 메인 요리
   }
-  return best ? best.v : null;
+  return null;
 }
 // 켜져 있고 매칭되면 추정 라인 HTML, 아니면 빈 문자열
 function kcalLine(name) {
