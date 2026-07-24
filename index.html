@@ -498,6 +498,12 @@
   .empty .state-note {
     margin-top: 16px; font-size: 13px; color: var(--sub);
   }
+  /* 학교 셧다운(전기설비 점검) 임시 안내 배너: 경고색 아닌 조용한 남색 안내 톤 */
+  .shutdown-banner {
+    background: var(--navy-soft); color: var(--navy);
+    border-radius: 12px; padding: 11px 14px; margin: 0 0 12px;
+    font-size: 13px; line-height: 1.5; font-weight: 500;
+  }
   footer {
     max-width: 640px; margin: 0 auto; padding: 0 16px 40px;
     font-size: 12px; color: var(--sub); text-align: center; line-height: 1.6;
@@ -704,6 +710,18 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 // (hours 데이터 수집·저장과 판정 코드는 그대로 두고, 화면 표시만 비활성)
 // 다시 켜려면 true 로: 운영시간 텍스트 / '지금 운영 중' 배지 / 칩 초록 점이 함께 살아남.
 const SHOW_HOURS = false;
+
+// ── 임시: 학교 셧다운(전기설비 점검) 안내 ─────────────────────────
+// 이 기간에 걸친 날짜에만 안내 배너 + 빈 상태 문구 대체가 뜨고, 기간이 지나면
+// 자동으로 사라진다(별도 조치 불필요). 8/3 이후 이 상수와 사용처(배너/빈상태
+// inShutdown 분기)는 통째로 제거해도 됨. — 국민대 공지: 2026-07-25~08-02 교내
+// 전 건물 셧다운(생활관 A·B·C동 제외), 이 기간 교내 식당 사실상 휴업.
+const SHUTDOWN = {
+  start: "2026-07-25", end: "2026-08-02",
+  msg: "7/25~8/2는 교내 셧다운 기간이라 대부분의 식당이 쉬어요",
+};
+// selectedDate는 "YYYY-MM-DD"라 문자열 비교가 곧 날짜 비교.
+function inShutdown(dateISO) { return dateISO >= SHUTDOWN.start && dateISO <= SHUTDOWN.end; }
 
 // 식당 표시 순서(이용자 많은 순). 목록에 없는 식당은 맨 뒤로.
 const RESTAURANT_ORDER = ["학생식당", "한울식당", "교직원식당", "청향 한식당", "청향 양식당", "K-Bob+"];
@@ -1516,7 +1534,14 @@ function render() {
   const restsWrap = document.getElementById("restsWrap");
   if (!dateHasAnyData(selectedDate)) {
     restsWrap.style.display = "none";
-    main.innerHTML = isWeekend(selectedDate)
+    main.innerHTML = inShutdown(selectedDate)
+      ? `<div class="empty state">
+           <div class="state-icon">🔧</div>
+           <div class="state-title">셧다운 휴무</div>
+           7/25~8/2는 교내 전기설비 점검(셧다운)으로<br>대부분의 식당이 쉬어요.
+           <div class="state-note">생활관식당은 운영할 수 있어요.</div>
+         </div>`
+      : isWeekend(selectedDate)
       ? `<div class="empty state">
            <div class="state-icon">😴</div>
            <div class="state-title">주말 휴무</div>
@@ -1565,7 +1590,11 @@ function render() {
   const openBadge = (SHOW_HOURS && isOpenNow(r) === true) ? `<span class="open-badge">지금 운영 중</span>` : "";
   const hoursHtml = SHOW_HOURS ? renderHours(r.hours) : "";
 
+  const shutdownBanner = inShutdown(selectedDate)
+    ? `<div class="shutdown-banner" role="note">🔧 ${SHUTDOWN.msg}</div>` : "";
+
   main.innerHTML = `
+    ${shutdownBanner}
     <section class="restaurant">
       <div class="head">
         <span>

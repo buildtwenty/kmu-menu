@@ -48,6 +48,28 @@ The crawler always hits the live university URL — there is no offline fixture.
 
 `.github/workflows/crawl.yml` runs daily at 06:00 KST (21:00 UTC cron), executes the crawler, and commits `menus.json` + `archive/` if changed (bot user `menu-bot`). Commits titled `🍚 메뉴 자동 갱신 <date>` are this bot. A later step (`calorie_check.py` + `gh`) opens/updates a "칼로리 미매칭 메뉴" issue when today-or-later menus lack a calorie keyword (`continue-on-error`, so it never fails the run). Manually triggerable via `workflow_dispatch`.
 
+## ⏳ 임시 메모 — 학교 셧다운(전기설비 점검) 대응 (끝나면 삭제, ~2026-08 중순)
+
+**확정 정보(학교 공지 원문 · 2026-07-24 확인)**
+- 셧다운 기간: **2026-07-25(토) ~ 08-02(일)**, 교내 전 건물 (**생활관 A·B·C동 제외**).
+- 이 기간 교내 식당 **사실상 휴업** (생활관식당은 운영 가능성 있음).
+- (이전 조사에서 단수 8/7·정전 8/8 미러 제목을 봤으나, 확정 공지 기간은 위 7/25~8/2. 8월 초 별도 단수/정전 세부일이 이 기간 안에 포함된 것으로 봄.)
+
+**대응 완료(2026-07-24)**
+- index.html: `SHUTDOWN` 상수(start/end/msg) + `inShutdown()`. 기간 내 날짜면 (a) 메뉴 영역 상단 조용한 안내 배너(`.shutdown-banner`, 남색 안내 톤), (b) 데이터 없는 날 빈 상태 문구를 "셧다운 휴무"로 대체. 기간 지나면 자동으로 안 뜸.
+- kmu_crawler.py: 끼니 라벨 단독 유령 항목 제거(`MEAL_ONLY_PAT`). 셧다운 평일 "석식+미운영" 패턴 대비. (커밋 bb1a17c)
+
+**🔻 TODO — 8/3 이후 배너 코드 제거**
+- index.html에서 `SHUTDOWN` 상수, `inShutdown()`, `.shutdown-banner` CSS, render()의 배너 삽입부(`shutdownBanner`)·빈상태 `inShutdown` 분기를 제거. (기간이 지나면 화면엔 이미 안 뜨므로 급하진 않음. 정리 차원.)
+- 이 임시 메모 섹션도 함께 삭제.
+
+**셧다운 종료 후(8/2·8/3 크롤) 재확인 체크리스트**
+1. `archive/2026-08.json`에 8/3(월)~ 개강 전 평일 정상 메뉴가 들어오는지.
+2. 7/25~8/2 셀 저장 결과 — 휴무 문구가 비워져 프론트에 "셧다운 휴무/배너"로 뜨는지, "석식" 등 유령 항목이 안 남았는지(유령 수정 반영 확인).
+3. Actions 로그: 셧다운 기간 크롤이 이상감지(오늘 이후 0건)로 실패해 알림 메일이 왔는지, 몇 통인지. 예상된 실패면 무시.
+4. 생활관식당이 이 기간 실제로 운영해 데이터가 들어오는지(들어오면 배너와 함께 정상 표시됨).
+5. 점검 종료 후 정상 크롤 재개 시 menus.json 자동 정상화 확인(실패일엔 커밋 안 되므로 낡은/빈 데이터 덮어쓰기 없음).
+
 ## 로드맵
 ### 완료
 - 크롤러 + 자동 갱신 + 병합 보관
