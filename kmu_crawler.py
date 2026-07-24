@@ -81,6 +81,11 @@ HOURS_PAT = re.compile(
 # 최종 안전망: 완성된 이름이 공지처럼 보이면 버림 (가격 없는 경우에만)
 JUNK_NAME_PAT = re.compile(r"(안내|방학|평일|주말|요일|휴무|휴점|운영|공휴일)")
 
+# 끼니 라벨만 덩그러니 남은 유령 항목. 예: '석식'(줄) 다음에 '미운영'(줄)이 오면
+# '미운영'은 NOTICE로 걸러지고 '석식'만 가격 없이 메뉴명으로 남는다. 이런 끼니 단어
+# 단독 이름은(가격 없을 때만) 실제 메뉴가 아니므로 버린다.
+MEAL_ONLY_PAT = re.compile(r"^(조식|중식|석식|중식/석식|중석식|조중식)$")
+
 # 한 글자짜리 한글 자모(ㅂ, ㅅ 등)만 남은 파편. 원본이 가격 뒤에 오타처럼 붙이거나
 # (예: '￦4900ㅂ') 빈 줄 대용으로 넣어 두는 경우가 있어, 메뉴명에 섞이지 않게 버린다.
 JAMO_JUNK_PAT = re.compile(r"^[ㄱ-ㅣ]+$")
@@ -152,8 +157,12 @@ def parse_cell(lines: list, default_meal, hours_sink=None):
         name = " ".join(name_buffer).strip()
         name = DECOR_PAT.sub("", name).strip()
         name = re.sub(r"\s{2,}", " ", name)  # 연속 공백 정리
-        # 안전망: 가격도 없고 이름이 공지처럼 보이면 버림
-        if name and not (price is None and JUNK_NAME_PAT.search(name)):
+        # 안전망: 가격 없이 남은 이름이 공지처럼 보이거나(JUNK_NAME_PAT)
+        # 끼니 라벨만(예: '석식') 덩그러니 남은 유령 항목이면 버림
+        if name and not (
+            price is None
+            and (JUNK_NAME_PAT.search(name) or MEAL_ONLY_PAT.match(name))
+        ):
             current_items.append({"name": name, "price": price})
         name_buffer = []
 
