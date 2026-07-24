@@ -1,6 +1,6 @@
 {
   "month": "2026-07",
-  "updated_at": "2026-07-24T07:04:48+09:00",
+  "updated_at": "2026-07-25T07:05:26+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -1326,6 +1326,17 @@
             {
               "name": "*한돈* 뚝배기삼겹구이 상추쌈/쌈장 무말랭이무침",
               "price": 5900
+            }
+          ]
+        },
+        {
+          "date": "2026-07-24",
+          "corner": "5코너 GUKBAP.Chef",
+          "meal": "석식",
+          "items": [
+            {
+              "name": "수육국밥",
+              "price": 6000
             }
           ]
         }
