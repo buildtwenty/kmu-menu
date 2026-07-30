@@ -59,8 +59,19 @@ The crawler always hits the live university URL — there is no offline fixture.
 - index.html: `SHUTDOWN` 상수(start/end/msg) + `inShutdown()`. 기간 내 날짜면 (a) 메뉴 영역 상단 조용한 안내 배너(`.shutdown-banner`, 남색 안내 톤), (b) 데이터 없는 날 빈 상태 문구를 "셧다운 휴무"로 대체. 기간 지나면 자동으로 안 뜸.
 - kmu_crawler.py: 끼니 라벨 단독 유령 항목 제거(`MEAL_ONLY_PAT`). 셧다운 평일 "석식+미운영" 패턴 대비. (커밋 bb1a17c)
 
+**이상 감지 방학 오탐 대응(2026-07-30 판단·수정)**
+- 셧다운 주간 내내 크롤이 이상감지 '식당 3곳 미만'으로 실패 중이었음. 로컬 진단 결과
+  살아남는 식당은 **K-Bob+ 1곳**(코너 '간편도시락', 돈가스마요덮밥·육회비빔밥 등 가격
+  붙은 **진짜 메뉴**, 오늘/내일 포함). 나머지 7개 테이블(한울/학생/교직원/청향 한식·양식/
+  **생활관식당 일반식·정기식**)은 전부 menus 0 = 셧다운 휴업. 노이즈 아님 → 조건부 수정.
+- `.github/workflows/crawl.yml` 이상 감지 step: 셧다운 기간(2026-07-25~08-02, index.html
+  SHUTDOWN 상수와 동일)에만 `min_rest=1`로 낮추고 `future==0`도 눈감음. `crawl_stats.json`의
+  `scraped_at`[:10]을 오늘로 봄. **기간 지나면 자동으로 3 복원**(배너와 같은 자동 소등).
+- 겸사겸사 Node20 deprecation 경고 제거: `actions/checkout@v4→v5`, `setup-python@v5→v6`.
+
 **🔻 TODO — 8/3 이후 배너 코드 제거**
 - index.html에서 `SHUTDOWN` 상수, `inShutdown()`, `.shutdown-banner` CSS, render()의 배너 삽입부(`shutdownBanner`)·빈상태 `inShutdown` 분기를 제거. (기간이 지나면 화면엔 이미 안 뜨므로 급하진 않음. 정리 차원.)
+- **crawl.yml 이상 감지 step의 셧다운 완화 블록(`SHUTDOWN_START/END`, `in_shutdown`, `min_rest`)도 함께 제거** → 원래 `rest < 3` / `future == 0`로 복원.
 - 이 임시 메모 섹션도 함께 삭제.
 
 **셧다운 종료 후(8/2·8/3 크롤) 재확인 체크리스트**
