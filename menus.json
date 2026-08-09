@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-09T06:31:07+09:00",
+  "fetched_at": "2026-08-10T06:32:51+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -1371,17 +1371,6 @@
     {
       "name": "학생식당(복지관 1층)",
       "menus": [
-        {
-          "date": "2026-07-19",
-          "corner": "가마 중식",
-          "meal": "중식",
-          "items": [
-            {
-              "name": "뚝)국물간장불고기 쌀밥 칠리미트볼조림 열무김치 깍두기 요구르트",
-              "price": 5300
-            }
-          ]
-        },
         {
           "date": "2026-07-20",
           "corner": "착한아침",
