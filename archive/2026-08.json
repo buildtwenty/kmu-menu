@@ -1,6 +1,6 @@
 {
   "month": "2026-08",
-  "updated_at": "2026-08-14T06:46:06+09:00",
+  "updated_at": "2026-08-15T06:25:37+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -854,7 +854,7 @@
           "items": [
             {
               "name": "삼겹콩나물덮밥 메추리알조림",
-              "price": 4300
+              "price": 5100
             }
           ]
         },
@@ -1533,7 +1533,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "말복DAY 비스트로-K 콘치즈로스트치킨 김가루주먹밥 케요네즈샐러드",
+              "name": "말복DAY 비스트로-K 오븐 콘치즈 반마리 로스트치킨 김가루조미밥 케요네즈샐러드 *무더운 말복 반마리치킨으로 원기회복하세요",
               "price": 7000
             }
           ]
