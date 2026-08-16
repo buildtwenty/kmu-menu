@@ -102,6 +102,25 @@ HOLIDAY_PAT = re.compile(
 )
 
 
+# 판촉 접두어. 원본은 메뉴 위에 'New', '★여름간식판매★' 같은 홍보 줄을 따로 넣어 두는데,
+# 가격 전까지의 줄이 전부 한 메뉴명으로 합쳐져 'New 여름간식판매 감자버터구이'가 된다.
+#   - 줄 전체가 판촉 문구면 그 줄을 버리고(PROMO_ONLY_PAT)
+#   - 혹시 메뉴와 한 줄에 붙어 오면 이름 '앞머리'에서만 떼어낸다(PROMO_PREFIX_PAT)
+# '철판매운오돈볶음'처럼 '판매'가 메뉴명 안에 박힌 경우를 건드리지 않으려고 토큰 단위로
+# 앵커한다('…판매'는 앞에 한글 6자까지만 허용 = '여름간식판매', '판매' 자체).
+_DECOR_EDGE = r"[\s*★☆♡♥◇※()\[\]<>·.\-]*"
+PROMO_WORD = r"(?:New|신메뉴|[가-힣]{0,6}판매(?:중|개시)?)"
+PROMO_ONLY_PAT = re.compile(rf"^{_DECOR_EDGE}{PROMO_WORD}{_DECOR_EDGE}$", re.I)
+PROMO_PREFIX_PAT = re.compile(rf"^(?:[*★☆♡♥◇※]*{PROMO_WORD}[*★☆♡♥◇※]*\s+)+", re.I)
+
+
+def strip_promo_prefix(name: str) -> str:
+    """메뉴명 앞머리의 판촉 접두어만 제거. 메뉴 자체는 보존.
+    'New 여름간식판매 감자버터구이' -> '감자버터구이'
+    '철판매운오돈볶음 …'는 그대로 (토큰 앵커라 걸리지 않음)."""
+    return PROMO_PREFIX_PAT.sub("", name).strip()
+
+
 def fetch_html() -> str:
     headers = {
         "User-Agent": (
@@ -157,6 +176,7 @@ def parse_cell(lines: list, default_meal, hours_sink=None):
         name = " ".join(name_buffer).strip()
         name = DECOR_PAT.sub("", name).strip()
         name = re.sub(r"\s{2,}", " ", name)  # 연속 공백 정리
+        name = strip_promo_prefix(name)      # 'New 여름간식판매 감자버터구이' -> '감자버터구이'
         # 안전망: 가격 없이 남은 이름이 공지처럼 보이거나(JUNK_NAME_PAT)
         # 끼니 라벨만(예: '석식') 덩그러니 남은 유령 항목이면 버림
         if name and not (
@@ -186,6 +206,9 @@ def parse_cell(lines: list, default_meal, hours_sink=None):
             continue
         # 공휴일/절기 단독 표기(예: '제헌절')는 메뉴가 아니므로 스킵
         if HOLIDAY_PAT.match(line):
+            continue
+        # 판촉 문구만 있는 줄(예: 'New', '★여름간식판매★')은 메뉴명에 섞지 않는다
+        if PROMO_ONLY_PAT.match(line):
             continue
         # 시간대/요일만 적힌 줄도 스킵 (예: "10시~17시", "평일 11시~18시")
         if TIME_ONLY_PAT.match(line):
