@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-19T06:25:13+09:00",
+  "fetched_at": "2026-08-20T06:25:59+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -4188,37 +4188,6 @@
     {
       "name": "K-Bob+",
       "menus": [
-        {
-          "date": "2026-07-29",
-          "corner": "간편도시락",
-          "meal": null,
-          "items": [
-            {
-              "name": "돈가스마요덮밥",
-              "price": 7500
-            },
-            {
-              "name": "육회비빔밥",
-              "price": 7700
-            },
-            {
-              "name": "(특)육회비빔밥",
-              "price": 10000
-            },
-            {
-              "name": "흑돼지김치찌개",
-              "price": 6700
-            },
-            {
-              "name": "흑돼지스팸김치찌개",
-              "price": 7900
-            },
-            {
-              "name": "흑돼지참치김치찌개",
-              "price": 7900
-            }
-          ]
-        },
         {
           "date": "2026-07-30",
           "corner": "간편도시락",
