@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-30T08:00:55+09:00",
+  "fetched_at": "2026-08-31T08:15:29+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -1316,17 +1316,6 @@
     {
       "name": "학생식당(복지관 1층)",
       "menus": [
-        {
-          "date": "2026-08-09",
-          "corner": "가마 중식",
-          "meal": "중식",
-          "items": [
-            {
-              "name": "뚝)영양닭곰탕 쌀밥 동그랑땡조림 참나물무침 배추김치 요구르트",
-              "price": 5300
-            }
-          ]
-        },
         {
           "date": "2026-08-10",
           "corner": "착한아침",
