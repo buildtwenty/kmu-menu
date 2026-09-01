@@ -1,6 +1,6 @@
 {
   "month": "2026-08",
-  "updated_at": "2026-08-31T08:15:29+09:00",
+  "updated_at": "2026-09-01T09:25:14+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -8158,6 +8158,39 @@
             {
               "name": "헬시그린샐러드 샐러드토핑&드레싱 푸질리샐러드 현미밥&수정과",
               "price": 8300
+            }
+          ]
+        },
+        {
+          "date": "2026-08-31",
+          "corner": "키친1",
+          "meal": null,
+          "items": [
+            {
+              "name": "뚝)소고기속풀이해장국 쌀밥 간장제육불고기 매콤우엉조림 브로콜리참깨무침 깍두기",
+              "price": 8300
+            }
+          ]
+        },
+        {
+          "date": "2026-08-31",
+          "corner": "키친2",
+          "meal": null,
+          "items": [
+            {
+              "name": "포장마차꼬치어묵얼큰우동 김밥볶음밥 왕새우튀김&타르타르s 과일푸딩 깍두기",
+              "price": 8300
+            }
+          ]
+        },
+        {
+          "date": "2026-08-31",
+          "corner": "오늘의 샐러드",
+          "meal": null,
+          "items": [
+            {
+              "name": "헬시그린샐러드 샐러드토핑&드레싱 알새우칩 현미밥&레몬디톡스워터",
+              "price": null
             }
           ]
         }
