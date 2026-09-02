@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-02T08:04:45+09:00",
+  "updated_at": "2026-09-03T08:02:26+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -1099,6 +1099,17 @@
             {
               "name": "[8도 맛집기행] 충청북도 단양편 토종흑마늘솥밥과\u000b수제떡갈비정식",
               "price": 21000
+            }
+          ]
+        },
+        {
+          "date": "2026-09-02",
+          "corner": "메뉴4",
+          "meal": null,
+          "items": [
+            {
+              "name": "일식커리정식",
+              "price": 17000
             }
           ]
         },
