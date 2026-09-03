@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-03T08:02:26+09:00",
+  "updated_at": "2026-09-04T08:00:44+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -958,7 +958,7 @@
           "meal": "석식",
           "items": [
             {
-              "name": "뚝)가자미살미역국 쌀밥 우불고기 고추장전 오이무침 배추김치 오미자주스 양상추샐러드",
+              "name": "뚝)바지락살미역국 쌀밥 우불고기 고추장전 오이무침 배추김치 오미자주스 양상추샐러드",
               "price": 7000
             }
           ]
@@ -981,7 +981,7 @@
           "items": [
             {
               "name": "중화풍잡채덮밥*짜장소스 깐풍강정 짜사이 유부장국",
-              "price": 5500
+              "price": 5300
             }
           ]
         }
