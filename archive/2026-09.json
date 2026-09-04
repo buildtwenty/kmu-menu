@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-04T08:00:44+09:00",
+  "updated_at": "2026-09-05T07:49:18+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -426,7 +426,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "칼국수 &왕교자",
+              "name": "비빔막국수 &왕교자",
               "price": 4300
             }
           ]
@@ -449,7 +449,7 @@
         {
           "date": "2026-09-04",
           "corner": "4코너 RICE.Oven",
-          "meal": "중식",
+          "meal": "중식/석식",
           "items": [
             {
               "name": "열무비빔밥 고구마맛탕",
@@ -468,17 +468,6 @@
           "items": [
             {
               "name": "Two in one 마라탕&계란볶음밥 찹쌀탕수육 샐러드 단무지",
-              "price": 6500
-            }
-          ]
-        },
-        {
-          "date": "2026-09-04",
-          "corner": "5코너 GUKBAP.Chef",
-          "meal": "석식",
-          "items": [
-            {
-              "name": "얼큰국밥",
               "price": 6500
             }
           ]
