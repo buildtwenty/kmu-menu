@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-09T08:13:56+09:00",
+  "updated_at": "2026-09-10T07:59:36+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -813,21 +813,10 @@
         {
           "date": "2026-09-09",
           "corner": "5코너 GUKBAP.Chef",
-          "meal": "중식",
+          "meal": "중식/석식",
           "items": [
             {
               "name": "소고기해장국 흰쌀밥 어묵볶음 무생채",
-              "price": 5500
-            }
-          ]
-        },
-        {
-          "date": "2026-09-09",
-          "corner": "5코너 GUKBAP.Chef",
-          "meal": "석식",
-          "items": [
-            {
-              "name": "뚝배기불고기 흰쌀밥 김말이튀김 부추무침",
               "price": 5500
             }
           ]
@@ -1868,7 +1857,7 @@
           "items": [
             {
               "name": "로제소스함바그*숏파스타 김치볶음밥 그린샐러드 부르르제로콜라",
-              "price": 5500
+              "price": 5700
             }
           ]
         },
@@ -1878,7 +1867,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "BISTRO-K 치즈듬뿍 감자탕볶음밥",
+              "name": "BISTRO-K 치즈듬뿍 우삼겹감자탕볶음밥",
               "price": 6500
             }
           ]
