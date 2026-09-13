@@ -121,6 +121,24 @@ def strip_promo_prefix(name: str) -> str:
     return PROMO_PREFIX_PAT.sub("", name).strip()
 
 
+# 원본 <td>는 같은 내용을 두 번 담는다: 숨은 폼값(<input type="hidden" name="aa"
+# value="{fourName=메뉴, fourValue=…}" />)과 그 뒤에 오는 실제 표시 텍스트.
+# 평소엔 파서가 input 태그를 통째로 넘겨 표시 텍스트만 읽히는데, 메뉴명에 큰따옴표가
+# 섞이면(예: '"Healthy Green Salad &드레싱2종"') value 속성이 거기서 잘려 나머지가
+# 본문 텍스트로 새어 나온다. 그래서 메뉴명 앞에 '…&드레싱2종" 아이스페퍼민트차 }" />'
+# 같은 파편이 붙거나, 휴무일엔 '}" />' 한 줄만 유령 항목으로 남는다.
+# 파싱 전에 이 hidden input을 통째로 지워서(닫는 '}" />'까지) 표시 텍스트만 남긴다.
+HIDDEN_INPUT_PAT = re.compile(
+    r"<input\b[^<]*?value=\"\{fourName=(?:(?!</td>|<input\b).)*?\}\"\s*/?>",
+    re.S,
+)
+
+
+def strip_hidden_inputs(html: str) -> str:
+    """<td> 안의 숨은 폼값 input을 제거해 표시 텍스트만 남긴다 (따옴표 깨짐 방지)."""
+    return HIDDEN_INPUT_PAT.sub("", html)
+
+
 def fetch_html() -> str:
     headers = {
         "User-Agent": (
@@ -505,7 +523,7 @@ def write_crawl_stats(new_restaurants: list, today: date) -> dict:
 
 
 def main():
-    html = fetch_html()
+    html = strip_hidden_inputs(fetch_html())
     soup = BeautifulSoup(html, "html.parser")
 
     new_restaurants = []
