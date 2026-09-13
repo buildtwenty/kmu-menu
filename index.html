@@ -419,19 +419,26 @@
     outline: 2px solid currentColor; outline-offset: 1px;
   }
 
+  /* 이름 | 가격 2열 그리드: 이름이 길면 이름 칸 안에서만 줄바꿈하고,
+     가격은 오른쪽 열 첫 줄에 고정 → 모든 코너의 가격이 같은 세로선에 정렬 */
   .item {
-    display: flex; align-items: baseline; justify-content: space-between;
-    flex-wrap: wrap; gap: 2px 12px; margin-top: 8px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline; column-gap: 12px; row-gap: 2px; margin-top: 8px;
   }
-  .item .menu-name { font-size: 15px; line-height: 1.45; }
+  .item .menu-name {
+    grid-column: 1;
+    font-size: 15px; line-height: 1.45;
+    word-break: keep-all; overflow-wrap: anywhere;
+  }
   .item .price {
+    grid-column: 2; grid-row: 1;
     font-variant-numeric: tabular-nums;
     font-size: 14px; font-weight: 700; color: var(--navy);
-    white-space: nowrap;
+    white-space: nowrap; text-align: right;
   }
-  /* 칼로리 추정치 (토글 켰을 때 메뉴명 아래) */
+  /* 칼로리 추정치 (토글 켰을 때 메뉴명 아래, 이름 열 안에서) */
   .item .kcal-est {
-    flex-basis: 100%;
+    grid-column: 1;
     font-size: 12px; color: var(--sub);
   }
 
