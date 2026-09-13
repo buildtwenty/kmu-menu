@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-09-13T07:52:25+09:00",
+  "fetched_at": "2026-09-14T00:40:22+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -2191,17 +2191,6 @@
     {
       "name": "학생식당(복지관 1층)",
       "menus": [
-        {
-          "date": "2026-08-23",
-          "corner": "가마 중식",
-          "meal": "중식",
-          "items": [
-            {
-              "name": "뚝)청양풍차돌볶음 쌀밥 미트볼조림 숙주나물무침 깍두기 요구르트",
-              "price": 5300
-            }
-          ]
-        },
         {
           "date": "2026-08-24",
           "corner": "착한아침",
