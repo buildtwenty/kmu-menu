@@ -102,6 +102,29 @@ HOLIDAY_PAT = re.compile(
 )
 
 
+# HTML 엔티티(&nbsp; &amp; 등). 메뉴명에 새어 들어오면 공백으로 바꿔 없앤다.
+# '&드레싱2종'처럼 &로 시작하는 진짜 메뉴 조각은 알려진 엔티티 이름 + ';' 를
+# 둘 다 만족해야 걸리므로 건드려지지 않는다.
+ENTITY_PAT = re.compile(r"&(?:nbsp|amp|quot|apos|lt|gt|#\d+);", re.I)
+
+# '글자'(한글/한자/일문/영문/숫자) 판별. 하나라도 있으면 메뉴일 수 있다고 본다.
+LETTER_PAT = re.compile(r"[0-9A-Za-z가-힣ㄱ-ㅣ\u3040-\u30ff\u4e00-\u9fff]")
+# 마크업에서만 쓰이는 기호들
+MARKUP_CHAR_PAT = re.compile(r"[<>/{}\"'=&;]")
+
+
+def is_markup_junk(text: str) -> bool:
+    """HTML 조각/태그 문자'만'으로 이루어진 부스러기인지.
+
+    원본 마크업이 새어 나오면 '}" />', '/>', '"' 같은 조각이 메뉴처럼 들어온다
+    (strip_hidden_inputs가 원인 자체를 막지만, 그 밖의 깨짐에 대한 일반 안전망).
+    글자가 하나라도 있으면(한글·한자·영문·숫자) 메뉴일 수 있으므로 건드리지 않고,
+    마크업 기호가 섞여 있으면서 글자가 전혀 없을 때만 버린다.
+    ('2' 같은 숫자만 있는 줄은 수량 표기일 수 있어 버리지 않는다.)
+    """
+    return bool(MARKUP_CHAR_PAT.search(text)) and not LETTER_PAT.search(text)
+
+
 # 판촉 접두어. 원본은 메뉴 위에 'New', '★여름간식판매★' 같은 홍보 줄을 따로 넣어 두는데,
 # 가격 전까지의 줄이 전부 한 메뉴명으로 합쳐져 'New 여름간식판매 감자버터구이'가 된다.
 #   - 줄 전체가 판촉 문구면 그 줄을 버리고(PROMO_ONLY_PAT)
@@ -197,7 +220,7 @@ def parse_cell(lines: list, default_meal, hours_sink=None):
         name = strip_promo_prefix(name)      # 'New 여름간식판매 감자버터구이' -> '감자버터구이'
         # 안전망: 가격 없이 남은 이름이 공지처럼 보이거나(JUNK_NAME_PAT)
         # 끼니 라벨만(예: '석식') 덩그러니 남은 유령 항목이면 버림
-        if name and not (
+        if name and not is_markup_junk(name) and not (
             price is None
             and (JUNK_NAME_PAT.search(name) or MEAL_ONLY_PAT.match(name))
         ):
@@ -237,6 +260,10 @@ def parse_cell(lines: list, default_meal, hours_sink=None):
         # <이벤트> <비오는날> 같은 꺾쇠 장식 제거 (메뉴명은 유지)
         line = re.sub(r"<[^>]*>", " ", line).strip()
         if not line:
+            continue
+        # HTML 엔티티 정리 후, 태그 문자만 남은 부스러기 줄은 버림
+        line = ENTITY_PAT.sub(" ", line).strip()
+        if not line or is_markup_junk(line):
             continue
         # 자모 파편(ㅂ 등)만 있는 줄은 버림
         if JAMO_JUNK_PAT.match(line):
