@@ -1,0 +1,6 @@
+# 국민대 오늘의 학식 — https://buildtwenty.github.io/kmu-menu/
+# 단일 페이지 정적 사이트. 전체 크롤 허용.
+User-agent: *
+Allow: /
+
+Sitemap: https://buildtwenty.github.io/kmu-menu/sitemap.xml

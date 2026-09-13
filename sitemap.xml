@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 단일 페이지 사이트라 URL은 하나. 메뉴 데이터는 매일 갱신되지만
+     페이지 자체(index.html)는 자주 바뀌지 않으므로 changefreq는 daily로 둔다. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://buildtwenty.github.io/kmu-menu/</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
