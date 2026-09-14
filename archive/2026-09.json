@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-14T07:56:29+09:00",
+  "updated_at": "2026-09-15T08:42:15+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -1162,21 +1162,10 @@
         {
           "date": "2026-09-14",
           "corner": "5코너 GUKBAP.Chef",
-          "meal": "중식",
+          "meal": "중식/석식",
           "items": [
             {
               "name": "만두육개장 흰쌀밥 감자조림 상추부추무침",
-              "price": 5500
-            }
-          ]
-        },
-        {
-          "date": "2026-09-14",
-          "corner": "5코너 GUKBAP.Chef",
-          "meal": "석식",
-          "items": [
-            {
-              "name": "부대찌개 흰쌀밥 김치전 멸치콩조림",
               "price": 5500
             }
           ]
