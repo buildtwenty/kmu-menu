@@ -1331,27 +1331,35 @@ function bypassMealOf(r, dateISO) {
 // 공백으로 이어붙어 있어 첫 토막만 남긴다. 단, 2~3토막짜리(단품/식당 요리명,
 // 예: "직화 낙지 덮밥")는 이름 자체일 수 있으므로 그대로 둔다.
 // 앞의 [홍보문구]·'T/O'(테이크아웃) 표식은 먼저 떼어낸다.
-// 메뉴 카드도 같은 판정을 쓰므로 {prefix(떼어낸 표식), dish(주메뉴), rest(구성품)}로 나눠 둔다.
+// 판정에서만 빼는 장식 토막(표시·공유 텍스트에는 그대로 남음):
+const DECO_PATS = [
+  /(?<!\S)\*[^*\s]+\*(?!\S)/g,                       // *가을낭만* (붙은 *계란후라이는 구성품이라 제외 안 함)
+  /(?<!\S)\[[^\]]*\]/g,                              // 단독 [오늘의 추천메뉴] 태그
+  /(?<![^\s\]])-(?:\S+(?:\s+\S+편(?!\S))?)?(?!\S)/g,  // ]-인천 강화도편 부제, 단독 ' - ' 구분자
+  /^T\/O(?!\S)/gi,                                   // 앞의 'T/O'
+];
+// 메뉴 카드도 같은 판정을 쓰므로 {head(표식+주메뉴), dish(공유용 주메뉴), rest(구성품)}로 나눈다.
 function splitDish(name) {
-  let s = (name || "").trim();
-  const label = (s.match(/^\[[^\]]*\]\s*/) || [""])[0];   // 앞의 [특선/홍보] 라벨
-  s = s.slice(label.length);
-  const to = (s.match(/^T\/O\s+/i) || [""])[0];           // 앞의 'T/O' 표식
-  s = s.slice(to.length);
-  const prefix = label + to;
-  const parts = s.split(/\s+/);
-  if (parts.length < 4) return { prefix, dish: s, rest: "" };  // 단품/요리명은 그대로
-  let n = 1;                                 // 4토막 이상 = 세트 → 주메뉴만
+  const s = (name || "").trim();
+  const bare = s.replace(/^\[[^\]]*\]\s*/, "").replace(/^T\/O\s+/i, "");
+  const deco = [];
+  for (const re of DECO_PATS) for (const m of s.matchAll(re)) deco.push([m.index, m.index + m[0].length]);
+  // 장식과 겹치지 않는 토막만 판정에 사용 (위치를 들고 있어 원문 그대로 잘라낼 수 있음)
+  const toks = [...s.matchAll(/\S+/g)]
+    .map(m => [m.index, m.index + m[0].length])
+    .filter(([a, b]) => !deco.some(([x, y]) => a < y && x < b));
+  if (toks.length < 4) return { head: s, dish: bare, rest: "" };  // 단품/요리명은 그대로
+  let end = toks[0][1];                      // 4토막 이상 = 세트 → 주메뉴만
   // 첫 토막이 조사(와/과/&)로 끝나면 이름이 잘린 것 → 다음 토막까지 붙임
-  if (/[와과&]$/.test(parts[0]) && parts[1]) n = 2;
-  return { prefix, dish: parts.slice(0, n).join(" "), rest: parts.slice(n).join(" ") };
+  if (/[와과&]$/.test(s.slice(toks[0][0], end)) && toks[1]) end = toks[1][1];
+  return { head: s.slice(0, end), dish: s.slice(toks[0][0], end), rest: s.slice(end).trim() };
 }
 function mainDish(name) { return splitDish(name).dish; }
 
 // 카드용 메뉴명: 세트면 구성품을 .side로 감싸 한 톤 연하게. 표식은 그대로 노출.
 function menuNameHtml(name) {
-  const { prefix, dish, rest } = splitDish(name);
-  return rest ? `${prefix}${dish} <span class="side">${rest}</span>` : name;
+  const { head, rest } = splitDish(name);
+  return rest ? `${head} <span class="side">${rest}</span>` : name;
 }
 
 // 특정 식당·끼니 기준 공유 텍스트. 해당 메뉴가 없으면 null.
