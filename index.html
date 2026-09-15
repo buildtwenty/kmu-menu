@@ -1251,7 +1251,7 @@ function cornerHtml(m, highlight) {
     : "";
   const itemsHtml = m.items.map(i => `
     <div class="item">
-      <span class="menu-name">${menuNameHtml(i.name)}</span>
+      <span class="menu-name">${menuNameHtml(i.name, m.corner)}</span>
       ${i.price ? `<span class="price">${i.price.toLocaleString()}원</span>` : ""}
       ${kcalLine(i.name)}
     </div>`).join("");
@@ -1339,7 +1339,9 @@ const DECO_PATS = [
   /^T\/O(?!\S)/gi,                                   // 앞의 'T/O'
 ];
 // 메뉴 카드도 같은 판정을 쓰므로 {head(표식+주메뉴), dish(공유용 주메뉴), rest(구성품)}로 나눈다.
-function splitDish(name) {
+// 코너명이 '메뉴N'인 곳(청향)은 코너 하나에 요리 하나 → 토막 수와 무관하게 단품.
+const SINGLE_DISH_CORNER = /^메뉴\s*\d+$/;
+function splitDish(name, corner) {
   const s = (name || "").trim();
   const bare = s.replace(/^\[[^\]]*\]\s*/, "").replace(/^T\/O\s+/i, "");
   const deco = [];
@@ -1348,17 +1350,18 @@ function splitDish(name) {
   const toks = [...s.matchAll(/\S+/g)]
     .map(m => [m.index, m.index + m[0].length])
     .filter(([a, b]) => !deco.some(([x, y]) => a < y && x < b));
-  if (toks.length < 4) return { head: s, dish: bare, rest: "" };  // 단품/요리명은 그대로
+  if (toks.length < 4 || SINGLE_DISH_CORNER.test(corner || ""))  // 단품/요리명은 그대로
+    return { head: s, dish: bare, rest: "" };
   let end = toks[0][1];                      // 4토막 이상 = 세트 → 주메뉴만
   // 첫 토막이 조사(와/과/&)로 끝나면 이름이 잘린 것 → 다음 토막까지 붙임
   if (/[와과&]$/.test(s.slice(toks[0][0], end)) && toks[1]) end = toks[1][1];
   return { head: s.slice(0, end), dish: s.slice(toks[0][0], end), rest: s.slice(end).trim() };
 }
-function mainDish(name) { return splitDish(name).dish; }
+function mainDish(name, corner) { return splitDish(name, corner).dish; }
 
 // 카드용 메뉴명: 세트면 구성품을 .side로 감싸 한 톤 연하게. 표식은 그대로 노출.
-function menuNameHtml(name) {
-  const { head, rest } = splitDish(name);
+function menuNameHtml(name, corner) {
+  const { head, rest } = splitDish(name, corner);
   return rest ? `${head} <span class="side">${rest}</span>` : name;
 }
 
@@ -1393,7 +1396,7 @@ function buildShareText(restName, meal) {
     const item = m.items.find(i => i.price) || m.items[0];  // 대표메뉴 = 첫 유가 항목
     if (!item) continue;
     const price = item.price ? ` ${item.price.toLocaleString()}원` : "";
-    const dish = mainDish(item.name);                       // 세트 구성품 생략
+    const dish = mainDish(item.name, m.corner);                     // 세트 구성품 생략
     // 형식: "코너명 · 대표메뉴 가격" (코너명 없으면 메뉴만)
     const line = m.corner ? `${m.corner} · ${dish}${price}` : `${dish}${price}`;
     const sep = bodyLines.length ? SEP.length + 1 : 0;      // 앞 줄과의 구분선 비용
