@@ -32,6 +32,7 @@
     --navy: #0f2b5b;        /* 국민대 남색 */
     --navy-soft: #eaeff8;
     --ink: #1c1e24;
+    --ink-strong: #0b0d12;  /* 주메뉴: ink보다 한 단계 검게 (흰 배경 약 19:1) */
     --sub: #5a6273;   /* 작은 회색 텍스트: AA 여유 있게 한 톤 진하게 (흰 배경 6.1:1) */
     --side: #555c6e;  /* 세트 구성품(쌀밥·반찬): ink와 sub 사이 (흰 배경 6.7:1, sub 6.1:1) */
     --line: #e6e8ee;
@@ -433,7 +434,7 @@
   }
   /* 세트 구성품은 한 톤 연하게 → 주메뉴가 먼저 눈에 들어오도록 */
   /* 위계: 주메뉴(굵고 진함) > 구성품(--side) > kcal(--sub, 12px) > 구분선 */
-  .item .menu-name .main { font-weight: 600; }
+  .item .menu-name .main { font-weight: 600; color: var(--ink-strong); }
   .item .menu-name .side { color: var(--side); }
   .item .price {
     grid-column: 2; grid-row: 1;
