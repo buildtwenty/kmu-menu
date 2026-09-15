@@ -33,7 +33,7 @@
     --navy-soft: #eaeff8;
     --ink: #1c1e24;
     --sub: #5a6273;   /* 작은 회색 텍스트: AA 여유 있게 한 톤 진하게 (흰 배경 6.1:1) */
-    --side: #50576a;  /* 세트 구성품(쌀밥·반찬): ink와 sub 사이 중간 톤 */
+    --side: #555c6e;  /* 세트 구성품(쌀밥·반찬): ink와 sub 사이 (흰 배경 6.7:1, sub 6.1:1) */
     --line: #e6e8ee;
     --bg: #f6f7fa;
     --card: #ffffff;
@@ -432,6 +432,8 @@
     word-break: keep-all; overflow-wrap: anywhere;
   }
   /* 세트 구성품은 한 톤 연하게 → 주메뉴가 먼저 눈에 들어오도록 */
+  /* 위계: 주메뉴(굵고 진함) > 구성품(--side) > kcal(--sub, 12px) > 구분선 */
+  .item .menu-name .main { font-weight: 600; }
   .item .menu-name .side { color: var(--side); }
   .item .price {
     grid-column: 2; grid-row: 1;
@@ -1350,19 +1352,26 @@ function splitDish(name, corner) {
   const toks = [...s.matchAll(/\S+/g)]
     .map(m => [m.index, m.index + m[0].length])
     .filter(([a, b]) => !deco.some(([x, y]) => a < y && x < b));
+  // main: 굵게 표시할 원문 구간 [시작, 끝] (장식 토막은 제외). 판정 토막이 없으면 null.
   if (toks.length < 4 || SINGLE_DISH_CORNER.test(corner || ""))  // 단품/요리명은 그대로
-    return { head: s, dish: bare, rest: "" };
+    return { head: s, dish: bare, rest: "",
+             main: toks.length ? [toks[0][0], toks[toks.length - 1][1]] : null };
   let end = toks[0][1];                      // 4토막 이상 = 세트 → 주메뉴만
   // 첫 토막이 조사(와/과/&)로 끝나면 이름이 잘린 것 → 다음 토막까지 붙임
   if (/[와과&]$/.test(s.slice(toks[0][0], end)) && toks[1]) end = toks[1][1];
-  return { head: s.slice(0, end), dish: s.slice(toks[0][0], end), rest: s.slice(end).trim() };
+  return { head: s.slice(0, end), dish: s.slice(toks[0][0], end), rest: s.slice(end).trim(),
+           main: [toks[0][0], end] };
 }
 function mainDish(name, corner) { return splitDish(name, corner).dish; }
 
-// 카드용 메뉴명: 세트면 구성품을 .side로 감싸 한 톤 연하게. 표식은 그대로 노출.
+// 카드용 메뉴명: 주메뉴(단품은 이름 전체)는 .main으로 굵게, 세트 구성품은 .side로 한 톤 연하게.
+// 표식·장식 토막은 보통 굵기로 그대로 노출.
 function menuNameHtml(name, corner) {
-  const { head, rest } = splitDish(name, corner);
-  return rest ? `${head} <span class="side">${rest}</span>` : name;
+  const { main, rest } = splitDish(name, corner);
+  if (!main) return name;
+  const s = (name || "").trim();
+  const tail = rest ? ` <span class="side">${rest}</span>` : s.slice(main[1]);
+  return `${s.slice(0, main[0])}<span class="main">${s.slice(main[0], main[1])}</span>${tail}`;
 }
 
 // 특정 식당·끼니 기준 공유 텍스트. 해당 메뉴가 없으면 null.
