@@ -70,12 +70,116 @@ DECOR_PAT = re.compile(r"[★☆♡♥◇※]+")
 # 운영시간 줄 판별 (메뉴에서는 계속 제외하되, hours 필드로 따로 보존).
 # 형식이 제각각이라 구조화하지 않고 원문 그대로 저장한다.
 #   예: "운영시간", "평일운영시간", "중식11:30~14:00", "조식 : 08:30 ~ 10:00", "11시~18시"
+# parse_cell의 메뉴 제외용. hours 수집 자체는 아래 extract_hours()가 줄을 묶어서 한다.
 HOURS_PAT = re.compile(
     r"운영\s*시간"                                          # '운영시간', '평일운영시간', '학기 중 운영시간'
     r"|\d{1,2}:\d{2}\s*[~∼\-]\s*\d{1,2}:\d{2}"              # 08:30 ~ 10:00, 11:30~14:00
     r"|\d{1,2}\s*시\s*[~∼\-]\s*\d{1,2}\s*시"                # 11시~18시, 10시~17시
     r"|(조식|중식|석식|조\s*중식)\s*:?\s*\d{1,2}\s*[:시]"   # 중식11:30, 석식17:00
 )
+
+# ── 운영시간 블록 수집 (extract_hours) ─────────────────────────
+# 원본은 운영시간을 한 줄에 다 적지 않고 <br>로 토막 내 둔다.
+#   한울:  "학기 중" / "운영시간" / "안내" / "평일" / "10시30분" / "~18시30분"
+#   청향:  "석식" / "17:00~19:00" / "(18:30 주문마감)"
+#   양식당: "석식" / "미운영" / "주말 및 공휴일 휴점"
+# 줄마다 HOURS_PAT로 골라내면 '운영시간' 한 줄만 남고 정작 시간은 잃는다. 그래서
+# 시간 관련 줄을 분류한 뒤, 이어지는 토막을 한 줄로 합쳐 저장한다.
+#   - 시간(HT_TIME): "10시30분", "08:30~14:00", "11시~17시"  ('12시간숙성' 같은 '시간'은 제외)
+#   - 제목(HT_HEAD): '운영시간'이 들어간 줄
+#   - 안내(HT_NOTICE): 미운영·휴점·휴무·주문마감·대관·운영 없음 (시간 관련 안내)
+#   - 문맥(HT_CTX): 줄 전체가 '학기 중'/'평일'/'석식'/'안내'/'토/일요일' 같은 단어 하나뿐인 토막.
+#     혼자서는 의미가 없고 앞뒤 줄에 붙어야 한다.
+# 이어붙이기 규칙:
+#   - '~', '및', '-'로 시작하거나 괄호로 감싼 줄은 바로 앞 줄에 붙는다 (연결 토막)
+#   - 문맥 토막처럼 '아직 끝나지 않은' 줄(시간 범위도 안내어도 없음) 뒤에 오는 줄은 붙는다
+#   - '안내'는 앞 줄('운영시간')의 꼬리로 항상 붙는다
+#   - ※/◇/* 로 시작하는 줄은 새 줄을 연다 (섹션 제목·별도 안내)
+#   - 메뉴 등 무관한 줄이 끼면 블록이 끊긴다(인접한 줄끼리만 합침)
+# 최종적으로 시간·제목·안내어 중 하나라도 없는 줄(문맥 토막만 남은 것)은 버린다.
+HT_TIME = re.compile(r"\d{1,2}:\d{2}|\d{1,2}\s*시(?!간)")
+HT_RANGE = re.compile(
+    r"\d{1,2}:\d{2}\s*[~∼\-]\s*\d{1,2}:\d{2}"
+    r"|\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?\s*[~∼\-]\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?"
+)
+HT_HEAD = re.compile(r"운영\s*시간")
+HT_NOTICE = re.compile(r"미운영|휴점|휴무|휴업|주문\s*마감|운영\s*(?:없|안\s*[함합])|대관")
+HT_CTX = re.compile(
+    r"^(학기\s*중|방학\s*중|안내|평일|주말|조식|중식|석식|조\s*중식|조중식|중석식|조\s*·\s*중식"
+    r"|토/일요일|토요일|일요일|공휴일|월~금)$"
+)
+HT_JOINER = re.compile(r"^(?:[~∼\-및]|\(.*\)$)")
+HT_DECOR_LEAD = re.compile(r"^[\s※◇◆■□▶▷●○◎★☆*·•]+")
+HT_DECOR_TAIL = re.compile(r"[\s*]+$")
+
+
+def _clean_hours_line(raw: str):
+    """장식/태그를 걷어낸 텍스트와, 원문이 ※/◇/* 장식으로 시작했는지 여부."""
+    t = ENTITY_PAT.sub(" ", raw)
+    t = re.sub(r"<([^>]*)>", r" \1 ", t)     # '<차이웨이 운영시간> 11:00' -> '차이웨이 운영시간 11:00'
+    decorated = bool(HT_DECOR_LEAD.match(t))
+    t = HT_DECOR_LEAD.sub("", t)
+    t = HT_DECOR_TAIL.sub("", t)
+    t = re.sub(r"\s{2,}", " ", t).strip()
+    return t, decorated
+
+
+def _hours_kind(t: str):
+    if HT_HEAD.search(t):
+        return "head"
+    if HT_RANGE.search(t):
+        return "range"
+    if HT_NOTICE.search(t):
+        return "notice"
+    if HT_TIME.search(t):
+        return "time"
+    if HT_CTX.match(t):
+        return "ctx"
+    return None
+
+
+def _hours_complete(text: str) -> bool:
+    """이 줄이 그 자체로 끝난 줄인지 (시간 범위/제목/안내어가 있으면 완결)."""
+    return bool(HT_RANGE.search(text) or HT_HEAD.search(text) or HT_NOTICE.search(text))
+
+
+def _hours_meaningful(text: str) -> bool:
+    """문맥 토막('석식', '평일')만 남은 줄은 운영시간 정보가 아니므로 버린다.
+    시각 하나만 있는 줄('3시의 간식' 같은 메뉴명일 수 있음)도 제목/범위/안내어 없이는 버린다."""
+    return _hours_complete(text)
+
+
+def extract_hours(lines: list) -> list:
+    """셀의 줄 목록에서 운영시간 관련 줄을 골라, 토막난 줄을 합쳐 리스트로 반환."""
+    out = []
+    cur = None          # 조립 중인 줄의 토막들
+    last_i = -2         # 마지막으로 소비한 줄 번호 (인접 판단)
+
+    def flush():
+        nonlocal cur
+        if cur:
+            text = " ".join(cur)
+            text = re.sub(r"\s+([~∼])\s*", r"\1", text)   # '10시30분 ~18시30분' -> '10시30분~18시30분'
+            if _hours_meaningful(text):
+                out.append(text)
+        cur = None
+
+    for i, raw in enumerate(lines):
+        t, decorated = _clean_hours_line(raw)
+        kind = _hours_kind(t) if t else None
+        if kind is None:
+            flush()
+            continue
+        joiner = bool(HT_JOINER.match(t))
+        adjacent = cur is not None and last_i == i - 1
+        if adjacent and (joiner or t == "안내" or (not _hours_complete(" ".join(cur)) and not decorated)):
+            cur.append(t)
+        else:
+            flush()
+            cur = [t]
+        last_i = i
+    flush()
+    return out
 
 
 # 최종 안전망: 완성된 이름이 공지처럼 보이면 버림 (가격 없는 경우에만)
@@ -350,10 +454,8 @@ def parse_table(table) -> dict:
             lines = split_cell_lines(cell)
             if not lines:
                 continue
-            # 운영시간 줄은 주말/평일 구분 없이 원문 그대로 수집 (메뉴에서는 제외)
-            for ln in lines:
-                if HOURS_PAT.search(ln):
-                    hours_raw.append(ln)
+            # 운영시간 줄은 주말/평일 구분 없이 수집 (토막난 줄은 합쳐서, 메뉴에서는 제외)
+            hours_raw.extend(extract_hours(lines))
 
             blocks = parse_cell(lines, default_meal)
 
