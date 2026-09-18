@@ -1109,6 +1109,7 @@ function init() {
   buildDayTabs(dates, DATE_SET);
   setupCalendar();
   setupDrawer();
+  registerServiceWorker();   // 데이터 로드 뒤(첫 화면과 경쟁하지 않게) 웹 푸시용 SW 등록
 
   // 식당 탭 초기화
   const ordered = orderedRestaurants();
@@ -1391,6 +1392,17 @@ function classifyCorners(restaurant) {
    공유하기: 식당 선택 → 끼니 선택 → 텍스트 생성
 ──────────────────────────────────────────────── */
 const SHARE_URL = "https://buildtwenty.github.io/kmu-menu";
+
+/* ────────────────────────────────────────────────
+   서비스 워커 등록 (웹 푸시용). 프로젝트 페이지라 /kmu-menu/ 스코프.
+──────────────────────────────────────────────── */
+const SW_PATH = "/kmu-menu/sw.js";
+const SW_SCOPE = "/kmu-menu/";
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register(SW_PATH, { scope: SW_SCOPE })
+    .catch(e => console.warn("서비스 워커 등록 실패", e));
+}
 const MEAL_ORDER = ["조식", "중식", "석식"];
 
 // 선택 날짜에 메뉴가 있는 식당 목록(정렬됨). 없으면 빈 배열.
