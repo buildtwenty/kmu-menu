@@ -48,7 +48,11 @@ The crawler always hits the live university URL — there is no offline fixture.
 
 **`index.html` is a single self-contained file** (inline CSS + JS, no dependencies). On load it fetches only `menus.json` + `calories.json`, builds a continuous date selector + per-restaurant tabs, and highlights the current/next meal by wall-clock time (`nextMeal()`). The calendar button lazily loads `archive/YYYY-MM.json` for past-month browsing (`loadMonth`); `restaurantsForDate()` picks the archive month when browsing the past, else `menus.json`. The kcal toggle matches menu names against `calories.json` keywords (longest-match wins). Restaurant `name` is split into name + location via the `(...)` suffix convention (e.g. `한울식당(법학관 지하1층)`).
 
+**Web push (PWA):** `manifest.json` + `icons/` + `sw.js` (push → notification, click → focus/open `/kmu-menu/`; no caching). The drawer's "아침 알림 받기" button (`setupPush()`/`onPushClick()` in `index.html`) subscribes with the public VAPID key and POSTs the subscription to Supabase REST (`subscriptions` table: `id, endpoint(unique), keys jsonb, restaurants, keywords, created_at`; RLS lets anon insert only, so 409 = already subscribed). iOS Safari outside standalone gets a "홈 화면에 추가" guide sheet instead. `scripts/send_push.py` builds the day's summary from `menus.json` (ports `splitDish`) and sends via pywebpush; 404/410 rows are deleted. Secrets (`SUPABASE_SECRET_KEY`, `VAPID_PRIVATE_KEY` PEM) live only in GitHub Secrets and `vapid_private.pem` is gitignored — never put them in code. The Supabase URL, publishable key and VAPID public key are public values hardcoded in `index.html`/`send_push.py`. All PWA paths are absolute under `/kmu-menu/` (project page), so local testing needs the repo served under that prefix.
+
 ## Automation
+
+`.github/workflows/push.yml` runs weekdays at 08:00 KST (`0 23 * * 0-4` UTC) and on `workflow_dispatch`, executing `scripts/send_push.py` (`--dry-run` locally prints the summary without sending). It only reads `menus.json` and never commits.
 
 `.github/workflows/crawl.yml` runs daily at 06:00 KST (21:00 UTC cron), executes the crawler, and commits `menus.json` + `archive/` if changed (bot user `menu-bot`). Commits titled `🍚 메뉴 자동 갱신 <date>` are this bot. A later step (`calorie_check.py` + `gh`) opens/updates a "칼로리 미매칭 메뉴" issue when today-or-later menus lack a calorie keyword (`continue-on-error`, so it never fails the run). Manually triggerable via `workflow_dispatch`.
 
@@ -94,9 +98,12 @@ The crawler always hits the live university URL — there is no offline fixture.
   (날짜 탭·식당 칩 role=tab+aria-selected, 끼니 aria-pressed, 공유·햄버거 aria-expanded,
    토스트 role=status), 스크롤 페이드를 오버플로 감지로 정교화(넘칠 때만·넘치는 쪽만,
    끝까지 스크롤하면 사라짐, resize·웹폰트 로딩에 반응)
+- 웹 푸시 알림 (2026-09-19): PWA(manifest·아이콘·iOS 메타) + sw.js + 서랍 '아침 알림 받기'
+  (안드로이드/데스크톱 구독 → Supabase 저장, iOS Safari는 홈 화면 추가 안내 시트) +
+  scripts/send_push.py(평일 08:00 KST push.yml). 실기기 구독·workflow_dispatch 테스트 발송은 사용자 몫.
+  restaurants·keywords 컬럼은 null로 저장 중 (식당별/키워드 알림은 미구현)
 ### 다음 순서
 1. 개강 홍보 준비 (도메인 구매 검토 포함)
-(이후: 웹 푸시 Supabase)
 ### 조건부 / 보류
 - 시험기간 주말: 10월 중간고사 때 실제 운영 확인 후 크롤러 주말 허용 + 문구 확정
 - 특식 뱃지: 크롤러가 지우는 ★특식★ 장식을 뱃지로 살리기
