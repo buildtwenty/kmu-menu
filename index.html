@@ -35,6 +35,7 @@
     --ink-strong: #0b0d12;  /* 주메뉴: ink보다 한 단계 검게 (흰 배경 약 19:1) */
     --sub: #5a6273;   /* 작은 회색 텍스트: AA 여유 있게 한 톤 진하게 (흰 배경 6.1:1) */
     --side: #555c6e;  /* 세트 구성품(쌀밥·반찬): ink와 sub 사이 (흰 배경 6.7:1, sub 6.1:1) */
+    --muted: #9aa1b0; /* 지나간 운영시간 줄: 읽히되 물러나 보이게 (흰 배경 약 3:1, 취소선 대신) */
     --line: #e6e8ee;
     --bg: #f6f7fa;
     --card: #ffffff;
@@ -373,11 +374,14 @@
   }
   .rhours .hours-cap { font-weight: 700; margin-bottom: 2px; }
   .rhours .hours-lines { display: flex; flex-direction: column; }
+  .rhours .hsec + .hsec { margin-top: 3px; }
   .rhours .hline { line-height: 1.5; }
-  .rhours .hline.hhead { margin-top: 3px; color: var(--ink); font-weight: 600; }
-  .rhours .hline.hhead:first-child { margin-top: 0; }
-  /* 접힌 상태: 처음 2줄만 보이고 나머지는 숨김 */
-  .rhours.collapsed .hline:nth-child(n+3) { display: none; }
+  .rhours .hline.hhead { color: var(--ink); font-weight: 600; }
+  /* 오늘 탭에서 이미 지난 끼니 줄: 흐리게만 (취소선은 폐지된 것처럼 보여 쓰지 않음) */
+  .rhours .hline.past { color: var(--muted); }
+  /* 접힌 상태: 맨 위 섹션(오늘에 맞는 운영시간, 최소 3줄)만 보이고 나머지 섹션은 숨김.
+     어떤 섹션을 접을지는 renderHours()가 .fold 로 표시 */
+  .rhours.collapsed .fold { display: none; }
   .rhours .hours-toggle {
     margin-top: 3px; padding: 0; border: none; background: none;
     color: var(--navy); font: inherit; font-weight: 700; cursor: pointer;
@@ -731,10 +735,12 @@ const KCAL_NOTICE_KEY = "kmu-kcal-notice"; // 최초 안내 표시 여부
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-// 운영시간 표시 스위치. 정확한 운영시간이 확정되기 전까지 꺼둠.
-// (hours 데이터 수집·저장과 판정 코드는 그대로 두고, 화면 표시만 비활성)
-// 다시 켜려면 true 로: 운영시간 텍스트 / '지금 운영 중' 배지 / 칩 초록 점이 함께 살아남.
-const SHOW_HOURS = false;
+// 운영시간 텍스트 표시 스위치 (오늘·미래 탭에서 카드 머리에 🕒 운영시간 블록).
+const SHOW_HOURS = true;
+// '지금 운영 중' 배지 + 식당 칩 초록 점. 운영시간 원문이 들쭉날쭉해 "운영 중"이라고
+// 단정했다가 틀리면(거짓 양성) 더 해로우므로 보류. 시간 경과의 시각 표현(흐림)까지만 한다.
+// (isOpenNow() 판정 코드는 그대로 두고 화면만 비활성)
+const SHOW_OPEN_BADGE = false;
 
 // 식당 표시 순서(이용자 많은 순). 목록에 없는 식당은 맨 뒤로.
 const RESTAURANT_ORDER = ["학생식당", "한울식당", "교직원식당", "청향 한식당", "청향 양식당", "K-Bob+"];
@@ -901,24 +907,103 @@ function isOpenNow(restaurant) {
   if (!ranges || !ranges.length) return null;   // 애매하면 배지 생략(억지 판정 X)
   return ranges.some(r => now.min >= r[0] && now.min < r[1]);
 }
-// 운영시간을 섹션(◇/※ 헤더)별로 줄바꿈해 표시. 3줄 초과면 접고 '더보기'로 펼침.
-function renderHours(hours) {
-  if (!hours || !hours.length) return "";
-  const rows = hours.map(l => {
-    const t = l.trim();
-    const head = /^[◇※]/.test(t);   // 섹션 구분 헤더
-    return `<div class="hline${head ? " hhead" : ""}">${t}</div>`;
+// ── 운영시간 블록 렌더링 (시간 인지형) ──
+// hours 원문 줄을 다듬어 섹션(평일/주말 제목 단위)으로 묶고, 보고 있는 날짜에 맞춰 표시한다.
+//   - 제목만 있는 줄('운영시간', '※운영시간안내', '학기 중 운영시간')은 🕒 캡션과 겹치므로 생략
+//   - '평일운영시간'/'학기 중 주말운영시간'처럼 대상 요일을 알려주는 제목은 섹션 헤더로 유지
+//   - 선택한 날짜의 요일(평일/주말)에 맞는 섹션을 맨 위로. 오늘이면 다가오는 끼니(nextMeal)가
+//     들어 있는 섹션을 우선해 순서를 정한다
+//   - 오늘 탭에서만: 끝 시각이 이미 지난 줄은 .past(흐림). 시간을 못 읽는 줄(안내문)은 항상 기본 톤
+//   - 접힌 상태에서는 맨 위 섹션(들)을 최소 3줄 보이고 나머지 섹션을 접는다
+function cleanHoursLine(raw) {
+  return String(raw)
+    .replace(/<([^>]*)>/g, " $1 ")            // '<차이웨이 운영시간>' 꺾쇠 장식 제거
+    .replace(/^[\s※◇◆■□▶▷●○◎★☆*·•]+/, "")   // 앞머리 장식 (예전 저장 데이터 호환)
+    .replace(/[\s*]+$/, "")
+    .replace(/\s{2,}/g, " ").trim();
+}
+function isHoursTitleOnly(t) {
+  return t.replace(/운영\s*시간|안내|학기\s*중|방학\s*중|[\s:：·\-()]/g, "") === "";
+}
+function hoursLineMeals(t) {
+  if (/조\s*·?\s*중식|조중식/.test(t)) return ["조식", "중식"];
+  if (/중석식|중식\s*\/\s*석식/.test(t)) return ["중식", "석식"];
+  return ["조식", "중식", "석식"].filter(m => t.includes(m));
+}
+function hoursSections(hours) {
+  const sections = [];
+  let cur = null;
+  (hours || []).forEach(raw => {
+    const t = cleanHoursLine(raw);
+    if (!t || isHoursTitleOnly(t)) return;
+    const ranges = parseRangesFromHours([t]);
+    const scopeWord = /주말|토\s*\/?\s*일/.test(t) ? "weekend" : (/평일/.test(t) ? "weekday" : null);
+    if (scopeWord && /운영\s*시간/.test(t) && !ranges.length) {     // 섹션 헤더
+      cur = { scope: scopeWord, head: t, lines: [] };
+      sections.push(cur);
+      return;
+    }
+    if (!cur) { cur = { scope: null, head: null, lines: [] }; sections.push(cur); }
+    cur.lines.push({ text: t, ranges, meals: hoursLineMeals(t), past: false });
+  });
+  // 섹션 안에서는 시간이 있는 줄을 먼저, 안내문은 뒤로 (원래 순서는 유지)
+  sections.forEach(sec => {
+    sec.lines = [...sec.lines.filter(l => l.ranges.length), ...sec.lines.filter(l => !l.ranges.length)];
+  });
+  return sections.filter(sec => sec.lines.length);
+}
+function renderHours(hours, dateISO) {
+  const sections = hoursSections(hours);
+  if (!sections.length) return "";
+  const today = dateISO === kstTodayISO();
+  const dayType = isWeekend(dateISO) ? "weekend" : "weekday";
+  const nowMin = today ? kstNow().min : null;
+  const nm = today ? nextMeal() : null;
+
+  if (today) {
+    // 오늘에 해당하는 섹션(요일 표시 없음 또는 오늘 요일과 일치)만 대상. 평일에 보는 주말 섹션은 그대로.
+    sections.filter(sec => !sec.scope || sec.scope === dayType).forEach(sec => sec.lines.forEach(l => {
+      // 시간 범위가 있고 그 끝이 모두 지났으면 흐림. 못 읽는 줄은 그대로.
+      l.past = l.ranges.length > 0 && l.ranges.every(r => nowMin >= r[1]);
+    }));
+  }
+  // 정렬: 선택 날짜 요일에 맞는 섹션 → 요일 표시 없는 섹션 → 다른 요일 섹션.
+  // 오늘이면 그 안에서 다가오는 끼니 줄이 살아 있는 섹션을 앞으로.
+  const rank = sec => {
+    let r = sec.scope ? (sec.scope === dayType ? 0 : 20) : 10;
+    if (today && !sec.lines.some(l => !l.past && l.meals.includes(nm))) r += 1;
+    return r;
+  };
+  const ordered = sections.map((sec, i) => ({ sec, i })).sort((a, b) => rank(a.sec) - rank(b.sec) || a.i - b.i).map(x => x.sec);
+
+  // 접기: 맨 위 섹션부터 최소 3줄이 보일 때까지 펼치고, 그 뒤 섹션은 .fold
+  const lineCount = sec => sec.lines.length + (sec.head ? 1 : 0);
+  const total = ordered.reduce((n, sec) => n + lineCount(sec), 0);
+  let foldFrom = ordered.length;
+  if (total > 4) {
+    let shown = 0;
+    for (let i = 0; i < ordered.length; i++) {
+      shown += lineCount(ordered[i]);
+      if (shown >= 3) { foldFrom = i + 1; break; }
+    }
+  }
+  const collapsible = foldFrom < ordered.length;
+
+  const html = ordered.map((sec, i) => {
+    const head = sec.head ? `<div class="hline hhead">${sec.head}</div>` : "";
+    const rows = sec.lines.map(l => `<div class="hline${l.past ? " past" : ""}">${l.text}</div>`).join("");
+    return `<div class="hsec${collapsible && i >= foldFrom ? " fold" : ""}">${head}${rows}</div>`;
   }).join("");
-  const many = hours.length > 3;
-  return `<div class="rhours${many ? " collapsed" : ""}">`
+  return `<div class="rhours${collapsible ? " collapsed" : ""}">`
     + `<div class="hours-cap">🕒 운영시간</div>`
-    + `<div class="hours-lines">${rows}</div>`
-    + (many ? `<button type="button" class="hours-toggle" onclick="toggleHours(this)">더보기</button>` : "")
+    + `<div class="hours-lines">${html}</div>`
+    + (collapsible ? `<button type="button" class="hours-toggle" onclick="toggleHours(this)" aria-expanded="false">더보기</button>` : "")
     + `</div>`;
 }
 function toggleHours(btn) {
   const collapsed = btn.closest(".rhours").classList.toggle("collapsed");
   btn.textContent = collapsed ? "더보기" : "접기";
+  btn.setAttribute("aria-expanded", String(!collapsed));
 }
 // 해당 날짜에 어떤 식당이든 메뉴가 있으면 true
 function dateHasAnyData(dateISO) {
@@ -1026,7 +1111,7 @@ function init() {
   const restsEl = document.getElementById("rests");
   restsEl.innerHTML = ordered.map(r => {
     const n = baseName(r.name);
-    const dot = (SHOW_HOURS && isOpenNow(r) === true) ? `<span class="chip-dot" title="운영 중"></span>` : "";
+    const dot = (SHOW_OPEN_BADGE && isOpenNow(r) === true) ? `<span class="chip-dot" title="운영 중"></span>` : "";
     return `<button class="chip ${n === selectedRestaurant ? "active" : ""}" role="tab" aria-selected="${n === selectedRestaurant}" data-rest="${n}">${n}${dot}</button>`;
   }).join("");
 
@@ -1621,9 +1706,10 @@ function render() {
   if (countText) subParts.push(countText);
   const sub = subParts.join(" · ");
 
-  // 운영시간 + '지금 운영 중' 배지 (SHOW_HOURS 켜졌을 때만 표시)
-  const openBadge = (SHOW_HOURS && isOpenNow(r) === true) ? `<span class="open-badge">지금 운영 중</span>` : "";
-  const hoursHtml = SHOW_HOURS ? renderHours(r.hours) : "";
+  // 운영시간 블록: 오늘·미래 탭에서만 (달력으로 과거를 볼 땐 그날의 운영시간을 알 수 없으니 숨김).
+  // '지금 운영 중' 배지는 SHOW_OPEN_BADGE(보류)로 별도 게이트.
+  const openBadge = (SHOW_OPEN_BADGE && isOpenNow(r) === true) ? `<span class="open-badge">지금 운영 중</span>` : "";
+  const hoursHtml = (SHOW_HOURS && selectedDate >= kstTodayISO()) ? renderHours(r.hours, selectedDate) : "";
 
   main.innerHTML = `
     <section class="restaurant">
