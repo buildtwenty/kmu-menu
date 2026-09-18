@@ -42,6 +42,8 @@ The crawler always hits the live university URL — there is no offline fixture.
 
 **Hidden-input leak (`strip_hidden_inputs`, runs on the raw HTML before BeautifulSoup):** every `<td>` carries its content twice — once inside `<input type="hidden" name="aa" value="{fourName=메뉴, fourValue=…<br>…}" />` and once as the visible text after it. The attribute value is **not** escaped, so a menu name containing a `"` (e.g. `"Healthy Green Salad &드레싱2종"`) terminates the attribute early and the rest leaks into the text as `…}" />` garbage glued onto the next menu name — or, on a closed day, as a lone `}" />` ghost item. Stripping the whole input tag (up to its closing `}" />`) before parsing leaves only the visible text. Verified equivalent on a normal page, so it is a no-op except on quote-broken cells.
 
+**Hours (`extract_hours`, called per cell in `parse_table`):** the source splits operating hours across `<br>` fragments (`학기 중`/`운영시간`/`안내`/`평일`/`10시30분`/`~18시30분`). Lines are classified (`HT_HEAD`/`HT_RANGE`/`HT_NOTICE`/`HT_TIME`/`HT_CTX`) and adjacent fragments are joined into one line; leading `※◇*` decorations are stripped; a line survives only if it has a title, a time range, or a closure/notice keyword (a lone single time like `3시의 간식` is a menu, not hours). `parse_cell` is untouched by this, so menu output is unaffected. `hours` is restaurant-level metadata (newest crawl wins in `merge_restaurants`); the frontend's `renderHours()` turns it into weekday/weekend sections and fades lines whose end time has passed on the today tab.
+
 **Weekend handling (`parse_table`):** the source page duplicates weekday menus into Saturday/Sunday columns even though campus cafeterias are closed, so weekend (`weekday >= 5`) cells are dropped — **except** for `생활관식당` (dorm cafeteria), which does operate weekends. Any name-based special-casing like this lives here.
 
 **`index.html` is a single self-contained file** (inline CSS + JS, no dependencies). On load it fetches only `menus.json` + `calories.json`, builds a continuous date selector + per-restaurant tabs, and highlights the current/next meal by wall-clock time (`nextMeal()`). The calendar button lazily loads `archive/YYYY-MM.json` for past-month browsing (`loadMonth`); `restaurantsForDate()` picks the archive month when browsing the past, else `menus.json`. The kcal toggle matches menu names against `calories.json` keywords (longest-match wins). Restaurant `name` is split into name + location via the `(...)` suffix convention (e.g. `한울식당(법학관 지하1층)`).
@@ -56,7 +58,14 @@ The crawler always hits the live university URL — there is no offline fixture.
 - 식당 탭 레이아웃, 연속 달력, 주말 휴무 표시, 상시 메뉴 분리
 - 칼로리 추정 (kcal 토글, 미매칭 이슈 알림)
 - 월별 아카이브 + 과거 탐색
-- 날짜 탭 월요일 시작, 햄버거 서랍 메뉴, 운영시간 표시 보류(SHOW_HOURS=false)
+- 날짜 탭 월요일 시작, 햄버거 서랍 메뉴
+- 운영시간 표시 (SHOW_HOURS=true, 2026-09-19): 시간 인지형 텍스트. 오늘 탭에서 끝난 끼니 줄만
+  --muted로 흐림(취소선 X), 선택 요일(평일/주말)에 맞는 섹션 우선 + nextMeal() 섹션 우선,
+  접힘은 맨 위 섹션(최소 3줄), 제목-only 줄 생략, 과거 날짜는 블록 숨김.
+  '지금 운영 중' 배지·칩 초록 점은 SHOW_OPEN_BADGE=false로 계속 보류 (거짓 양성 방지).
+  크롤러는 extract_hours()로 <br> 토막 줄을 합쳐 수집 ('평일 10시30분~18시30분',
+  '석식 17:00~19:00 (18:30 주문마감)', '금요일석식 미운영', '주말 및 공휴일 휴점').
+  주의: 대관 휴무 같은 날짜 한정 안내도 hours(식당 단위)에 들어가 그 주 내내 보임 → 다음 크롤에서 자연 소멸
 - GoatCounter 연동 (익명 방문 통계, 비공개 · 화면 표시 없음)
   - 계정 생성·이메일 인증 완료, 대시보드: kmu-menu.goatcounter.com
   - 주간 이메일 리포트 설정됨 (매주 발송 → vydbswnd0729@naver.com)
