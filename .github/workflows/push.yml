@@ -1,0 +1,36 @@
+name: 아침 메뉴 웹 푸시
+
+on:
+  schedule:
+    # UTC 23:00 일~목 = 한국시간 월~금 08:00 (GitHub cron은 UTC 기준)
+    # crawl.yml(06:00 KST)이 먼저 menus.json을 갱신·커밋해 두므로 여기선 읽기만 한다.
+    - cron: "0 23 * * 0-4"
+  # Actions 탭에서 수동 발송 (테스트용)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 가져오기
+        uses: actions/checkout@v5
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: 라이브러리 설치
+        run: pip install -r requirements.txt
+
+      # 오늘(KST) 메뉴 요약을 만들어 Supabase 구독자 전원에게 발송.
+      # 오늘 메뉴가 없으면(공휴일 등) 스크립트가 스스로 건너뛰고 정상 종료한다.
+      # 만료 구독(404/410)은 발송 중에 테이블에서 정리된다.
+      - name: 웹 푸시 발송
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+        run: python scripts/send_push.py
