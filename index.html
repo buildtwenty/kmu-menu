@@ -92,6 +92,15 @@
   .bell-btn:not([data-state="on"]) .bell-off { display: block; }
   .bell-btn[data-state="on"] { color: #ffd66b; }
   .bell-btn[data-state="denied"] { opacity: 0.45; }
+  /* 진행 중(구독 요청 왕복 1~3초): 벨 대신 스피너, 탭 무시 */
+  .bell-btn .bell-spin { display: none; }
+  .bell-btn.busy .bell-off, .bell-btn.busy .bell-on { display: none; }
+  .bell-btn.busy .bell-spin { display: block; }
+  .bell-btn.busy { cursor: default; }
+  .spin { animation: spin 0.9s linear infinite; }
+  .spin-inline { width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 1.8s; } }
   h1 {
     font-family: 'Black Han Sans', Pretendard, sans-serif;
     font-size: 26px; font-weight: 400; letter-spacing: 0.5px;
@@ -234,6 +243,8 @@
     background: var(--navy); color: #fff; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
   }
   .pref-save[disabled] { opacity: 0.6; cursor: default; }
+  .pref-save .spin-inline, .pref-unsub .spin-inline, .drawer-item .spin-inline { display: inline-block; }
+  .pref-unsub[disabled] { opacity: 0.6; cursor: default; }
   .pref-unsub {
     display: block; width: 100%; min-height: 44px; margin-top: 6px; border: none; background: none;
     color: #b42318; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
@@ -691,6 +702,11 @@
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0" fill="none"/>
           <path d="M9.5 12.5l2 2 3.5-4" fill="none" stroke="#0f2b5b" stroke-width="2.2"/>
+        </svg>
+        <!-- 진행 중: 스피너 (얇은 링 + 밝은 호) -->
+        <svg class="bell-spin spin" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.3"/>
+          <path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
         </svg>
       </button>
       <button id="shareBtn" class="menu-btn" aria-label="공유하기" aria-haspopup="dialog" aria-expanded="false">
@@ -1600,9 +1616,33 @@ async function pushState() {
   } catch (e) {}
   return "off";
 }
+// 버튼 안에 넣는 작은 스피너 (currentColor: 남색 버튼에선 흰색, 서랍에선 흰색)
+const SPINNER_INLINE = `<svg class="spin spin-inline" viewBox="0 0 24 24" aria-hidden="true">`
+  + `<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.3"/>`
+  + `<path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+let pushVisualBusy = false;   // 구독 요청 진행 중: 벨·서랍 버튼을 스피너로 (updatePushBtn이 덮어쓰지 않게)
+function setPushBusy(on) {
+  pushVisualBusy = on;
+  const bell = document.getElementById("bellBtn");
+  if (bell) {
+    bell.classList.toggle("busy", on);
+    bell.disabled = on;
+    bell.setAttribute("aria-busy", String(on));
+    if (on) bell.setAttribute("aria-label", "알림 설정 중");
+  }
+  const btn = document.getElementById("pushBtn");
+  if (btn && on) {
+    btn.disabled = true;
+    btn.setAttribute("aria-busy", "true");
+    btn.innerHTML = `${SPINNER_INLINE}알림 설정 중…<span class="sub">잠시만요, 1~3초 걸려요</span>`;
+  }
+  if (btn && !on) btn.removeAttribute("aria-busy");
+}
+
 async function updatePushBtn() {
   const btn = document.getElementById("pushBtn");
   if (!btn) return;
+  if (pushVisualBusy) return;                 // 진행 중엔 스피너 유지
   const st = await pushState();
   // 헤더 벨: 같은 상태를 아이콘으로. 미지원이면 숨김, 구독 중이면 채운 벨, 차단이면 흐림
   const bell = document.getElementById("bellBtn");
@@ -1645,18 +1685,19 @@ async function saveSubscription(sub) {
   throw new Error(`저장 실패 HTTP ${res.status}`);
 }
 
-let pushBusy = false;
+let pushBusy = false;   // 탭 직후부터 끝날 때까지 true: 더블탭·양쪽 버튼 동시 탭 무시
 async function onPushClick() {
   if (pushBusy) return;
-  const st = await pushState();
-  if (st === "ios-guide") { closeDrawer(); openIosGuide(); return; }
-  if (st === "on") { closeDrawer(); openPushSettings(); return; }
-  if (st === "denied") {
-    showToast("알림이 차단돼 있어요. 주소창의 자물쇠(사이트 설정)에서 알림을 허용한 뒤 새로고침해 주세요", 4200);
-    return;
-  }
   pushBusy = true;
   try {
+    const st = await pushState();
+    if (st === "ios-guide") { closeDrawer(); openIosGuide(); return; }
+    if (st === "on") { closeDrawer(); openPushSettings(); return; }
+    if (st === "denied") {
+      showToast("알림이 차단돼 있어요. 주소창의 자물쇠(사이트 설정)에서 알림을 허용한 뒤 새로고침해 주세요", 4200);
+      return;
+    }
+    setPushBusy(true);                        // 여기서부터 푸시 서버 왕복 + 저장: 스피너
     const perm = await Notification.requestPermission();
     if (perm !== "granted") {
       showToast(perm === "denied" ? "알림이 차단됐어요. 브라우저 설정에서 허용해 주세요" : "알림 권한이 필요해요");
@@ -1672,12 +1713,13 @@ async function onPushClick() {
     }
     const code = await saveSubscription(sub);
     markSaved(sub.endpoint);
-    showToast(code === 409 ? "아침 알림을 받는 중이에요 (평일 8시)" : "평일 아침 8시에 오늘 메뉴를 보내 드릴게요");
+    showToast(code === 409 ? "아침 알림을 받아요 (평일 8시, 이미 등록돼 있었어요)" : "알림을 받아요! 평일 아침 8시에 오늘 메뉴를 보내 드릴게요", 3000);
   } catch (e) {
     console.warn("푸시 구독 실패", e);
     showToast("알림 설정에 실패했어요. 잠시 후 다시 시도해 주세요");
   } finally {
     pushBusy = false;
+    setPushBusy(false);                       // 성공이면 updatePushBtn이 채운 벨로, 실패면 원상복구
     updatePushBtn();
   }
 }
@@ -1772,7 +1814,7 @@ async function savePushPrefs() {
     restaurants: prefRests.size ? orderedRestaurants().map(r => baseName(r.name)).filter(n => prefRests.has(n)) : null,
     keywords: prefKeywords.length ? prefKeywords.slice() : null,
   };
-  btn.disabled = true; btn.textContent = "저장 중…";
+  btn.disabled = true; btn.innerHTML = `${SPINNER_INLINE}저장 중…`;
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
@@ -1794,7 +1836,8 @@ async function savePushPrefs() {
 }
 async function unsubscribePush() {
   const btn = document.getElementById("prefUnsub");
-  btn.disabled = true;
+  if (btn.disabled) return;
+  btn.disabled = true; btn.innerHTML = `${SPINNER_INLINE}끄는 중…`;
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
@@ -1808,7 +1851,7 @@ async function unsubscribePush() {
     console.warn("알림 해제 실패", e);
     showToast("알림을 끄지 못했어요. 잠시 후 다시 시도해 주세요");
   } finally {
-    btn.disabled = false;
+    btn.disabled = false; btn.textContent = "알림 그만 받기";
     updatePushBtn();
   }
 }
