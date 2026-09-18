@@ -84,10 +84,21 @@
   }
   .menu-btn:hover { background: rgba(255,255,255,0.24); }
   .menu-btn svg { width: 22px; height: 22px; display: block; }
+  .menu-btn[hidden] { display: none; }
+  /* 알림 벨: 구독 중이면 노란 채움 + 체크, 차단이면 흐림 (탭하면 해제 안내 토스트) */
+  .bell-btn .bell-on, .bell-btn .bell-off { display: none; }
+  .bell-btn[data-state="on"] .bell-on { display: block; }
+  .bell-btn[data-state="on"] .bell-off { display: none; }
+  .bell-btn:not([data-state="on"]) .bell-off { display: block; }
+  .bell-btn[data-state="on"] { color: #ffd66b; }
+  .bell-btn[data-state="denied"] { opacity: 0.45; }
   h1 {
     font-family: 'Black Han Sans', Pretendard, sans-serif;
     font-size: 26px; font-weight: 400; letter-spacing: 0.5px;
+    word-break: keep-all;          /* 좁을 때 '학/식'처럼 단어 중간에서 끊기지 않게 */
   }
+  /* 헤더 버튼 3개(벨·공유·메뉴)와 공존: 좁은 화면에선 제목을 한 단계 줄임 */
+  @media (max-width: 420px) { h1 { font-size: 23px; } }
   h1 .bowl { color: #ffd66b; }
   .updated { font-size: 12px; opacity: 0.75; margin-top: 4px; }
 
@@ -508,7 +519,7 @@
     max-width: 90%; z-index: 50;
     background: rgba(28,30,36,0.94); color: #fff;
     padding: 11px 16px; border-radius: 999px;
-    font-size: 13px; line-height: 1.3; white-space: nowrap;
+    font-size: 13px; line-height: 1.35; white-space: normal; text-align: center;   /* 긴 안내는 줄바꿈 */
     box-shadow: 0 6px 20px rgba(0,0,0,0.25);
     opacity: 0; transition: opacity 0.25s, transform 0.25s;
     pointer-events: none;
@@ -623,6 +634,19 @@
       <div class="updated" id="updated">불러오는 중…</div>
     </div>
     <div class="head-actions">
+      <button id="bellBtn" class="menu-btn bell-btn" aria-label="아침 알림 받기" data-state="off" hidden>
+        <!-- 미구독/안내: 선 벨 -->
+        <svg class="bell-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>
+        </svg>
+        <!-- 구독 중: 채운 벨 + 체크 -->
+        <svg class="bell-on" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0" fill="none"/>
+          <path d="M9.5 12.5l2 2 3.5-4" fill="none" stroke="#0f2b5b" stroke-width="2.2"/>
+        </svg>
+      </button>
       <button id="shareBtn" class="menu-btn" aria-label="공유하기" aria-haspopup="dialog" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1504,6 +1528,16 @@ async function updatePushBtn() {
   const btn = document.getElementById("pushBtn");
   if (!btn) return;
   const st = await pushState();
+  // 헤더 벨: 같은 상태를 아이콘으로. 미지원이면 숨김, 구독 중이면 채운 벨, 차단이면 흐림
+  const bell = document.getElementById("bellBtn");
+  if (bell) {
+    bell.dataset.state = st;
+    bell.hidden = st === "unsupported";
+    bell.setAttribute("aria-label", {
+      "on": "아침 알림 받는 중", "denied": "알림이 차단돼 있어요",
+    }[st] || "아침 알림 받기");
+    bell.setAttribute("aria-pressed", String(st === "on"));
+  }
   btn.dataset.state = st;
   btn.hidden = st === "unsupported";
   btn.disabled = st === "denied";
@@ -1540,8 +1574,11 @@ async function onPushClick() {
   if (pushBusy) return;
   const st = await pushState();
   if (st === "ios-guide") { closeDrawer(); openIosGuide(); return; }
-  if (st === "on") { showToast("이미 아침 알림을 받고 있어요"); return; }
-  if (st === "denied") return;
+  if (st === "on") { showToast("아침 알림을 받는 중이에요 (평일 8시)"); return; }
+  if (st === "denied") {
+    showToast("알림이 차단돼 있어요. 주소창의 자물쇠(사이트 설정)에서 알림을 허용한 뒤 새로고침해 주세요", 4200);
+    return;
+  }
   pushBusy = true;
   try {
     const perm = await Notification.requestPermission();
@@ -1559,7 +1596,7 @@ async function onPushClick() {
     }
     const code = await saveSubscription(sub);
     markSaved(sub.endpoint);
-    showToast(code === 409 ? "이미 아침 알림을 받고 있어요" : "평일 아침 8시에 오늘 메뉴를 보내 드릴게요");
+    showToast(code === 409 ? "아침 알림을 받는 중이에요 (평일 8시)" : "평일 아침 8시에 오늘 메뉴를 보내 드릴게요");
   } catch (e) {
     console.warn("푸시 구독 실패", e);
     showToast("알림 설정에 실패했어요. 잠시 후 다시 시도해 주세요");
@@ -1583,6 +1620,8 @@ function setupPush() {
   const btn = document.getElementById("pushBtn");
   if (!btn) return;
   btn.addEventListener("click", onPushClick);
+  const bell = document.getElementById("bellBtn");
+  if (bell) bell.addEventListener("click", onPushClick);   // 헤더 벨도 같은 플로우
   document.getElementById("iosClose").addEventListener("click", closeIosGuide);
   const iov = document.getElementById("iosOverlay");
   iov.addEventListener("click", e => { if (e.target === iov) closeIosGuide(); });
