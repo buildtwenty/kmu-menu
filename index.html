@@ -193,6 +193,52 @@
   .ios-step .txt { font-size: 14px; line-height: 1.45; padding-top: 2px; }
   .ios-step .txt b { display: block; margin-bottom: 1px; }
   .ios-note { padding: 0 18px 14px; font-size: 12px; color: var(--sub); line-height: 1.5; }
+  /* 알림 설정 시트 (구독 중일 때) */
+  .pref-sec { padding: 6px 18px 4px; }
+  .pref-label { font-size: 13px; font-weight: 700; color: var(--sub); margin: 8px 0 8px; }
+  .pref-hint { font-size: 12px; color: var(--sub); margin-top: 6px; line-height: 1.45; }
+  .pref-rests { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pref-chip {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 40px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink);
+    padding: 0 14px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .pref-chip.on { border-color: var(--navy); background: var(--navy); color: #fff; }
+  .pref-chip.all.on { background: var(--navy); }
+  .kw-row { display: flex; gap: 8px; }
+  .kw-input {
+    flex: 1; min-width: 0; min-height: 44px; padding: 0 14px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink);
+    font-family: inherit; font-size: 15px;
+  }
+  .kw-input:focus { outline: 2px solid var(--navy); outline-offset: -1px; }
+  .kw-add {
+    flex: 0 0 auto; min-width: 64px; min-height: 44px; border: none; border-radius: 12px;
+    background: var(--navy-soft); color: var(--navy); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .kw-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .kw-chips:empty { display: none; }
+  .kw-chip {
+    display: inline-flex; align-items: center; gap: 4px; min-height: 36px;
+    border-radius: 999px; background: #fff3cf; color: #7a5200;
+    padding: 0 6px 0 12px; font-size: 14px; font-weight: 700;
+  }
+  .kw-chip button {
+    width: 28px; height: 28px; border: none; border-radius: 50%; background: none; color: inherit;
+    font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .kw-chip button:hover { background: rgba(0,0,0,0.08); }
+  .pref-actions { padding: 14px 18px 4px; }
+  .pref-save {
+    width: 100%; min-height: 48px; border: none; border-radius: 12px;
+    background: var(--navy); color: #fff; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .pref-save[disabled] { opacity: 0.6; cursor: default; }
+  .pref-unsub {
+    display: block; width: 100%; min-height: 44px; margin-top: 6px; border: none; background: none;
+    color: #b42318; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .pref-unsub-note { padding: 0 18px 12px; font-size: 12px; color: var(--sub); text-align: center; line-height: 1.45; }
   .drawer-details summary { list-style: none; }
   .drawer-details summary::-webkit-details-marker { display: none; }
   .drawer-details summary::after { content: "＋"; float: right; opacity: 0.7; }
@@ -516,7 +562,7 @@
   /* 최초 안내 토스트 */
   .kcal-toast {
     position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px);
-    max-width: 90%; z-index: 50;
+    max-width: 90%; z-index: 300;   /* 바텀시트(200)·달력(100) 위에도 보이게 */
     background: rgba(28,30,36,0.94); color: #fff;
     padding: 11px 16px; border-radius: 999px;
     font-size: 13px; line-height: 1.35; white-space: normal; text-align: center;   /* 긴 안내는 줄바꿈 */
@@ -749,6 +795,36 @@
       </div>
     </div>
     <div class="ios-note">iOS 16.4 이상에서 가능해요. Safari 탭에서는 알림을 켤 수 없어서 이 안내가 떠요.</div>
+  </div>
+</div>
+
+<!-- 구독 중일 때 벨/서랍 버튼 → 알림 설정 (식당·키워드) + 해제 -->
+<div id="pushOverlay" class="sheet-overlay" hidden>
+  <div class="sheet" role="dialog" aria-label="알림 설정" aria-modal="true">
+    <div class="sheet-head">
+      <span class="sheet-title">🔔 아침 알림 설정</span>
+      <button id="pushClose" class="sheet-close" aria-label="닫기">✕</button>
+    </div>
+    <div class="pref-sec">
+      <div class="pref-label">어느 식당 메뉴를 받을까요?</div>
+      <div class="pref-rests" id="prefRests" role="group" aria-label="식당 선택"></div>
+      <div class="pref-hint">아무것도 고르지 않으면 전체 식당 요약이 와요.</div>
+    </div>
+    <div class="pref-sec">
+      <div class="pref-label">키워드 알림 <span style="font-weight:400">(선택)</span></div>
+      <div class="kw-row">
+        <input id="kwInput" class="kw-input" type="text" inputmode="text" maxlength="20"
+               placeholder="예: 돈까스" aria-label="키워드 입력" autocomplete="off">
+        <button type="button" id="kwAdd" class="kw-add">추가</button>
+      </div>
+      <div class="kw-chips" id="kwChips" aria-live="polite"></div>
+      <div class="pref-hint">오늘 메뉴에 키워드가 들어 있으면 알림 맨 위에 "🎯 오늘 '돈까스' 있어요"가 붙어요.</div>
+    </div>
+    <div class="pref-actions">
+      <button type="button" id="prefSave" class="pref-save">저장</button>
+      <button type="button" id="prefUnsub" class="pref-unsub">알림 그만 받기</button>
+    </div>
+    <div class="pref-unsub-note">그만 받기를 누르면 이 기기의 알림이 꺼지고, 다음 발송 때 명단에서 자동으로 제거돼요.</div>
   </div>
 </div>
 
@@ -1545,7 +1621,7 @@ async function updatePushBtn() {
   const label = {
     "ios-guide": "🔔 아침 알림 받기",
     "denied": "🔕 알림이 차단돼 있어요<span class=\"sub\">브라우저 설정에서 이 사이트 알림을 허용해 주세요</span>",
-    "on": "🔔 아침 알림 받는 중 ✓<span class=\"sub\">평일 아침 8시에 오늘 메뉴를 보내 드려요</span>",
+    "on": "🔔 아침 알림 받는 중 ✓<span class=\"sub\">눌러서 식당·키워드 설정 또는 그만 받기</span>",
     "pending": "🔔 아침 알림 받기<span class=\"sub\">저장이 안 됐어요. 다시 눌러 주세요</span>",
     "off": "🔔 아침 알림 받기<span class=\"sub\">평일 아침 8시, 오늘 메뉴 한 줄 요약</span>",
   }[st] || "🔔 아침 알림 받기";
@@ -1574,7 +1650,7 @@ async function onPushClick() {
   if (pushBusy) return;
   const st = await pushState();
   if (st === "ios-guide") { closeDrawer(); openIosGuide(); return; }
-  if (st === "on") { showToast("아침 알림을 받는 중이에요 (평일 8시)"); return; }
+  if (st === "on") { closeDrawer(); openPushSettings(); return; }
   if (st === "denied") {
     showToast("알림이 차단돼 있어요. 주소창의 자물쇠(사이트 설정)에서 알림을 허용한 뒤 새로고침해 주세요", 4200);
     return;
@@ -1605,6 +1681,148 @@ async function onPushClick() {
     updatePushBtn();
   }
 }
+/* ── 알림 설정 시트: 식당·키워드 저장(자기 행 update), 해제 ── */
+const PUSH_PREFS_KEY = "kmu-push-prefs";   // 마지막으로 저장한 {restaurants, keywords} (익명은 자기 행을 읽을 수 없어 로컬에 보관)
+let prefRests = new Set();                 // 시트에서 고른 식당 (비어 있으면 전체)
+let prefKeywords = [];                     // 시트의 키워드 칩
+
+function readPrefs() {
+  try { return JSON.parse(localStorage.getItem(PUSH_PREFS_KEY) || "null") || {}; } catch (e) { return {}; }
+}
+function writePrefs(p) { try { localStorage.setItem(PUSH_PREFS_KEY, JSON.stringify(p)); } catch (e) {} }
+function clearPrefs() { try { localStorage.removeItem(PUSH_PREFS_KEY); } catch (e) {} }
+
+function renderPrefRests() {
+  const names = orderedRestaurants().map(r => baseName(r.name));
+  const allOn = prefRests.size === 0;
+  const el = document.getElementById("prefRests");
+  el.innerHTML = [`<button type="button" class="pref-chip all ${allOn ? "on" : ""}" data-rest="" aria-pressed="${allOn}">전체</button>`]
+    .concat(names.map(n =>
+      `<button type="button" class="pref-chip ${prefRests.has(n) ? "on" : ""}" data-rest="${n}" aria-pressed="${prefRests.has(n)}">${n}</button>`))
+    .join("");
+  el.querySelectorAll(".pref-chip").forEach(btn => btn.addEventListener("click", () => {
+    const n = btn.dataset.rest;
+    if (!n) prefRests.clear();                       // 전체
+    else if (prefRests.has(n)) prefRests.delete(n);
+    else prefRests.add(n);
+    renderPrefRests();
+  }));
+}
+function renderKwChips() {
+  const el = document.getElementById("kwChips");
+  el.innerHTML = prefKeywords.map((k, i) =>
+    `<span class="kw-chip">${k}<button type="button" aria-label="${k} 삭제" data-i="${i}">×</button></span>`).join("");
+  el.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    prefKeywords.splice(+b.dataset.i, 1);
+    renderKwChips();
+  }));
+}
+function addKeyword() {
+  const input = document.getElementById("kwInput");
+  const k = input.value.trim().replace(/\s+/g, " ");
+  if (!k) return;
+  if (k.length < 2) { showToast("키워드는 2글자 이상이에요"); return; }
+  if (prefKeywords.length >= 5) { showToast("키워드는 5개까지 넣을 수 있어요"); return; }
+  if (!prefKeywords.includes(k)) prefKeywords.push(k);
+  input.value = "";
+  renderKwChips();
+  input.focus();
+}
+function openPushSettings() {
+  const saved = readPrefs();
+  prefRests = new Set(Array.isArray(saved.restaurants) ? saved.restaurants : []);
+  prefKeywords = Array.isArray(saved.keywords) ? saved.keywords.slice() : [];
+  renderPrefRests();
+  renderKwChips();
+  document.getElementById("kwInput").value = "";
+  const ov = document.getElementById("pushOverlay");
+  ov.hidden = false;
+  void ov.offsetWidth;
+  ov.classList.add("open");
+}
+function closePushSettings() {
+  const ov = document.getElementById("pushOverlay");
+  ov.classList.remove("open");
+  setTimeout(() => { ov.hidden = true; }, 250);
+}
+// 자기 행(endpoint 일치)의 restaurants/keywords만 갱신. RLS가 X-Endpoint 헤더로 본인 행을 판별.
+// 갱신된 행이 0이면(정책 없음·행 없음) 실패로 본다 (PostgREST는 이때도 204라 count=exact로 확인).
+async function updatePrefsOnServer(endpoint, prefs) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`, {
+    method: "PATCH",
+    headers: {
+      "apikey": SUPABASE_PUBLISHABLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      "X-Endpoint": endpoint,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal, count=exact",
+    },
+    body: JSON.stringify({ restaurants: prefs.restaurants, keywords: prefs.keywords }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const range = res.headers.get("Content-Range") || "";
+  if (/\/0$/.test(range)) throw new Error("no row updated");
+}
+async function savePushPrefs() {
+  const btn = document.getElementById("prefSave");
+  if (btn.disabled) return;
+  const pending = document.getElementById("kwInput").value.trim();
+  if (pending) addKeyword();                        // 입력창에 남은 키워드도 포함
+  const prefs = {
+    restaurants: prefRests.size ? orderedRestaurants().map(r => baseName(r.name)).filter(n => prefRests.has(n)) : null,
+    keywords: prefKeywords.length ? prefKeywords.slice() : null,
+  };
+  btn.disabled = true; btn.textContent = "저장 중…";
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) throw new Error("no subscription");
+    await updatePrefsOnServer(sub.endpoint, prefs);
+    writePrefs(prefs);
+    const what = [];
+    if (prefs.restaurants) what.push(prefs.restaurants.length === 1 ? prefs.restaurants[0] : `${prefs.restaurants.length}개 식당`);
+    else what.push("전체 식당");
+    if (prefs.keywords) what.push(`키워드 ${prefs.keywords.length}개`);
+    showToast(`저장했어요 · ${what.join(" · ")}`);
+    closePushSettings();
+  } catch (e) {
+    console.warn("알림 설정 저장 실패", e);
+    showToast("설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요", 3200);
+  } finally {
+    btn.disabled = false; btn.textContent = "저장";
+  }
+}
+async function unsubscribePush() {
+  const btn = document.getElementById("prefUnsub");
+  btn.disabled = true;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+    // 서버 행은 지우지 않는다: 다음 발송에서 410으로 돌아와 자동 정리됨
+    try { localStorage.removeItem(PUSH_SAVED_KEY); } catch (e) {}
+    clearPrefs();
+    closePushSettings();
+    showToast("알림을 껐어요. 다음 발송 때 명단에서 자동으로 빠져요", 3200);
+  } catch (e) {
+    console.warn("알림 해제 실패", e);
+    showToast("알림을 끄지 못했어요. 잠시 후 다시 시도해 주세요");
+  } finally {
+    btn.disabled = false;
+    updatePushBtn();
+  }
+}
+function setupPushSettings() {
+  document.getElementById("pushClose").addEventListener("click", closePushSettings);
+  const ov = document.getElementById("pushOverlay");
+  ov.addEventListener("click", e => { if (e.target === ov) closePushSettings(); });
+  document.getElementById("kwAdd").addEventListener("click", addKeyword);
+  document.getElementById("kwInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addKeyword(); }
+  });
+  document.getElementById("prefSave").addEventListener("click", savePushPrefs);
+  document.getElementById("prefUnsub").addEventListener("click", unsubscribePush);
+}
 function openIosGuide() {
   const ov = document.getElementById("iosOverlay");
   ov.hidden = false;
@@ -1622,6 +1840,7 @@ function setupPush() {
   btn.addEventListener("click", onPushClick);
   const bell = document.getElementById("bellBtn");
   if (bell) bell.addEventListener("click", onPushClick);   // 헤더 벨도 같은 플로우
+  setupPushSettings();
   document.getElementById("iosClose").addEventListener("click", closeIosGuide);
   const iov = document.getElementById("iosOverlay");
   iov.addEventListener("click", e => { if (e.target === iov) closeIosGuide(); });
