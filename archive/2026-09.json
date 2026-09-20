@@ -1976,39 +1976,6 @@
               "price": 6500
             }
           ]
-        },
-        {
-          "date": "2026-09-24",
-          "corner": "1코너 SNACK1",
-          "meal": null,
-          "items": [
-            {
-              "name": "추석연휴",
-              "price": null
-            }
-          ]
-        },
-        {
-          "date": "2026-09-24",
-          "corner": "2코너 NOODLE",
-          "meal": null,
-          "items": [
-            {
-              "name": "추석연휴",
-              "price": null
-            }
-          ]
-        },
-        {
-          "date": "2026-09-24",
-          "corner": "4코너 RICE.Oven",
-          "meal": null,
-          "items": [
-            {
-              "name": "추석연휴",
-              "price": null
-            }
-          ]
         }
       ],
       "hours": [
@@ -4116,17 +4083,6 @@
             {
               "name": "뚝)고깃집된장찌개 쌀밥 동그랑땡조림 한식잡채 깍두기 후식약과",
               "price": 5300
-            }
-          ]
-        },
-        {
-          "date": "2026-09-25",
-          "corner": "가마 중식",
-          "meal": "중식",
-          "items": [
-            {
-              "name": "풍요로운 추석연휴 보내세요",
-              "price": null
             }
           ]
         },
@@ -8216,28 +8172,6 @@
             {
               "name": "공기밥",
               "price": 1000
-            }
-          ]
-        },
-        {
-          "date": "2026-09-24",
-          "corner": "오늘의도시락",
-          "meal": null,
-          "items": [
-            {
-              "name": "추석연휴",
-              "price": null
-            }
-          ]
-        },
-        {
-          "date": "2026-09-25",
-          "corner": "오늘의도시락",
-          "meal": null,
-          "items": [
-            {
-              "name": "추석연휴",
-              "price": null
             }
           ]
         }
