@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-09-20T07:42:47+09:00",
+  "fetched_at": "2026-09-21T08:02:33+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -2077,17 +2077,6 @@
     {
       "name": "학생식당(복지관 1층)",
       "menus": [
-        {
-          "date": "2026-08-30",
-          "corner": "가마 중식",
-          "meal": "중식",
-          "items": [
-            {
-              "name": "뚝)고추장제육볶음 돈육두부조림 꼬시래기초무침 요구르트/깍두기/쌀밥",
-              "price": 5300
-            }
-          ]
-        },
         {
           "date": "2026-08-31",
           "corner": "착한아침",
