@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-22T08:52:35+09:00",
+  "updated_at": "2026-09-23T08:30:59+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -1826,7 +1826,7 @@
         {
           "date": "2026-09-22",
           "corner": "3코너 CUTLET",
-          "meal": "중식/석식",
+          "meal": "중식",
           "items": [
             {
               "name": "고구마치즈돈가스 흑미밥 크림스프 양배추샐러드 마시는요거트",
@@ -1837,7 +1837,7 @@
         {
           "date": "2026-09-22",
           "corner": "4코너 RICE.Oven",
-          "meal": "중식",
+          "meal": "중식/석식",
           "items": [
             {
               "name": "참치생채비빔밥 두부조림",
@@ -1852,21 +1852,10 @@
         {
           "date": "2026-09-22",
           "corner": "5코너 GUKBAP.Chef",
-          "meal": null,
+          "meal": "중식",
           "items": [
             {
               "name": "Two in One 날치알밥 &미니우동 단무지 자두맛음료",
-              "price": 5900
-            }
-          ]
-        },
-        {
-          "date": "2026-09-22",
-          "corner": "5코너 GUKBAP.Chef",
-          "meal": "석식",
-          "items": [
-            {
-              "name": "*브랜드콜라보* 놀부부대찌개 감자전 부추무침",
               "price": 5900
             }
           ]
