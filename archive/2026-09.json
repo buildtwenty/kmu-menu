@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-23T08:30:59+09:00",
+  "updated_at": "2026-09-24T08:26:47+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -1917,7 +1917,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "닭칼국수 &왕교자",
+              "name": "잔치국수 &왕교자",
               "price": 4300
             }
           ]
@@ -4081,7 +4081,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "뚝)간장제육볶음 쌀밥 순살햄구이 양념깻잎지 깍두기 요구르트",
+              "name": "뚝)제육볶음 쌀밥 순살햄구이 양념깻잎지 깍두기 그린샐러드*드레싱",
               "price": 5300
             }
           ]
