@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-29T09:50:53+09:00",
+  "updated_at": "2026-09-30T09:05:43+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -2181,21 +2181,10 @@
         {
           "date": "2026-09-29",
           "corner": "5코너 GUKBAP.Chef",
-          "meal": "중식",
+          "meal": "중식/석식",
           "items": [
             {
               "name": "뚝배기 함박스테이크 옥수수스프 미니밥 그린샐러드 피클",
-              "price": 5500
-            }
-          ]
-        },
-        {
-          "date": "2026-09-29",
-          "corner": "5코너 GUKBAP.Chef",
-          "meal": "석식",
-          "items": [
-            {
-              "name": "닭계장 흑미밥 도토리묵무침 명엽채볶음",
               "price": 5500
             }
           ]
