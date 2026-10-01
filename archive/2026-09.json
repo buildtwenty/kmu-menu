@@ -1,6 +1,6 @@
 {
   "month": "2026-09",
-  "updated_at": "2026-09-30T09:05:43+09:00",
+  "updated_at": "2026-10-01T09:24:11+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -2269,7 +2269,7 @@
         {
           "date": "2026-09-30",
           "corner": "4코너 RICE.Oven",
-          "meal": "중식/석식",
+          "meal": "중식",
           "items": [
             {
               "name": "참치마요덮밥 무생채",
@@ -2280,7 +2280,7 @@
         {
           "date": "2026-09-30",
           "corner": "4코너 RICE.Oven",
-          "meal": "중식",
+          "meal": "중식/석식",
           "items": [
             {
               "name": "왕소시지하이라이스 콘샐러드",
@@ -4746,7 +4746,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "PREMIUM 만원의 국민 만찬 스테이크짜장면 계란볶음밥 유린기 짜사이무침 양파/춘장 탄산수",
+              "name": "PREMIUM 만원의 국민 만찬 스테이크짜장면 계란볶음밥 유린기 짜사이무침 양파/춘장 두쫀쿠",
               "price": 10000
             }
           ]
