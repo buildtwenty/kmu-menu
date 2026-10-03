@@ -1,6 +1,6 @@
 {
   "month": "2026-10",
-  "updated_at": "2026-10-02T09:34:20+09:00",
+  "updated_at": "2026-10-03T09:11:57+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -214,7 +214,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "닭갈비볶음밥 소떡소떡/허니머스타드",
+              "name": "닭갈비볶음밥 핫바",
               "price": 4900
             }
           ]
