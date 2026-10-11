@@ -44,7 +44,9 @@ The crawler always hits the live university URL — there is no offline fixture.
 
 **Hours (`extract_hours`, called per cell in `parse_table`):** the source splits operating hours across `<br>` fragments (`학기 중`/`운영시간`/`안내`/`평일`/`10시30분`/`~18시30분`). Lines are classified (`HT_HEAD`/`HT_RANGE`/`HT_NOTICE`/`HT_TIME`/`HT_CTX`) and adjacent fragments are joined into one line; leading `※◇*` decorations are stripped; a line survives only if it has a title, a time range, or a closure/notice keyword (a lone single time like `3시의 간식` is a menu, not hours). `parse_cell` is untouched by this, so menu output is unaffected. `hours` is restaurant-level metadata (newest crawl wins in `merge_restaurants`); the frontend's `renderHours()` turns it into weekday/weekend sections and fades lines whose end time has passed on the today tab.
 
-**Weekend handling (`parse_table`):** the source page duplicates weekday menus into Saturday/Sunday columns even though campus cafeterias are closed, so weekend (`weekday >= 5`) cells are dropped — **except** for `생활관식당` (dorm cafeteria), which does operate weekends. Any name-based special-casing like this lives here.
+**Weekend handling (`parse_table` → `keep_weekend_blocks`):** the source page often duplicates weekday menus into Saturday/Sunday columns even though most cafeterias are closed. A weekend cell is kept only if it has a priced item **and** differs from every weekday (Mon–Fri) cell of the same row that week (`weekday_blocks_of_row`, computed once per row). Comparing against the adjacent weekday only was not enough: when that day is a holiday the cell is empty and a copy of Thursday's menu slipped through (청향 한식당 2026-10-10). `생활관식당` (dorm cafeteria) is always kept because it really operates weekends; 학생식당's 가마 corner weekend menus survive the filter because they genuinely differ. Any name-based special-casing like this lives here.
+
+**Name polish (`clean_name`, last step of `flush_item`):** strips stray double quotes (`"Healthy Green Salad &드레싱2종"`, unbalanced `"후라이드반계치킨SET …`), lone ` - ` separator tokens, and joins syllable-split exclamation styling (`콩! 불! 떡!` → `콩불떡`) so keyword matching sees one token. Word-level `계란탁!` is left alone. Stored data was cleaned once (2026-10-11) when this was added; the filter only affects new crawls.
 
 **`index.html` is a single self-contained file** (inline CSS + JS, no dependencies). On load it fetches only `menus.json` + `calories.json`, builds a continuous date selector + per-restaurant tabs, and highlights the current/next meal by wall-clock time (`nextMeal()`). The calendar button lazily loads `archive/YYYY-MM.json` for past-month browsing (`loadMonth`); `restaurantsForDate()` picks the archive month when browsing the past, else `menus.json`. The kcal toggle matches menu names against `calories.json` keywords (longest-match wins). Restaurant `name` is split into name + location via the `(...)` suffix convention (e.g. `한울식당(법학관 지하1층)`).
 
@@ -54,7 +56,7 @@ The crawler always hits the live university URL — there is no offline fixture.
 
 `.github/workflows/push.yml` runs weekdays at 08:00 KST (`0 23 * * 0-4` UTC) and on `workflow_dispatch`, executing `scripts/send_push.py` (`--dry-run` locally prints the summary without sending). It only reads `menus.json` and never commits.
 
-`.github/workflows/crawl.yml` runs daily at 06:00 KST (21:00 UTC cron), executes the crawler, and commits `menus.json` + `archive/` if changed (bot user `menu-bot`). Commits titled `🍚 메뉴 자동 갱신 <date>` are this bot. A later step (`calorie_check.py` + `gh`) opens/updates a "칼로리 미매칭 메뉴" issue when today-or-later menus lack a calorie keyword (`continue-on-error`, so it never fails the run). Manually triggerable via `workflow_dispatch`.
+`.github/workflows/crawl.yml` runs daily at 06:00 KST (21:00 UTC cron), executes the crawler, and commits `menus.json` + `archive/` if changed (bot user `menu-bot`). Commits titled `🍚 메뉴 자동 갱신 <date>` are this bot. After the commit, `scripts/supabase_ping.py` sends one tiny `select` to the subscriptions table so the free-tier Supabase project never auto-pauses from inactivity (that pause killed push sends for 10 days in Oct 2026; `continue-on-error`, warning log only). A later step (`calorie_check.py` + `gh`) opens a "칼로리 미매칭 메뉴" issue when today-or-later menus lack a calorie keyword, or **edits the body** of the already-open one (no comment pile-up); `continue-on-error`, so it never fails the run. Manually triggerable via `workflow_dispatch`.
 
 ## 로드맵
 ### 완료
@@ -104,6 +106,10 @@ The crawler always hits the live university URL — there is no offline fixture.
 - 알림 2차 (2026-09-19): 구독 중 벨 → 알림 설정 시트(식당 다중 선택·키워드 칩·저장·그만 받기),
   send_push.py 개인화(식당 필터 + 🎯 키워드 줄). 설정 저장은 supabase/rls_update_policy.sql
   (X-Endpoint 헤더 기반 자기 행 update 정책)을 SQL Editor에서 실행해야 동작. '매칭된 날만 받기'는 미구현
+- 리뷰 후 정비 (2026-10-11): 주말 복붙 필터를 '같은 주 평일 전체'와 비교하도록 보정(공휴일 주 누수,
+  청향 10/10·7/18 잘못 저장분 제거), 메뉴명 잡티 정리(clean_name: 따옴표·홀로 선 하이픈·'콩! 불! 떡!'),
+  Supabase keep-alive(scripts/supabase_ping.py, crawl.yml 매일) + 발송 연결 오류 한 줄 메시지,
+  미매칭 이슈는 코멘트 누적 대신 본문 갱신(gh issue edit), 칼로리 키워드 14종 보강
 ### 다음 순서
 1. 개강 홍보 준비 (도메인 구매 검토 포함)
 ### 조건부 / 보류
@@ -111,7 +117,6 @@ The crawler always hits the live university URL — there is no offline fixture.
 - 특식 뱃지: 크롤러가 지우는 ★특식★ 장식을 뱃지로 살리기
 - 도움말 페이지, 메뉴 검색, 가격 필터, 주간 보기, 통계 페이지
 - 게시판: 운영 부담으로 보류 (한다면 "한줄평" 수준으로 축소)
-- 미매칭 이슈 중복 코멘트 방지 (매 크롤마다 같은 이슈에 코멘트 누적되는 것)
 - 병합 시 필터 소급 재적용: 기본은 안 함. 필터를 고칠 때 일회성 정리 스크립트로 처리.
   (merge 단순 유지 · 과거 데이터 소급 변형 위험 · NOTICE substring이 조립된 이름에 오제거 위험 회피.
    자동화한다면 앵커형 필터 HOLIDAY_PAT/JAMO_JUNK_PAT만 재적용하는 중간안이 그나마 안전)

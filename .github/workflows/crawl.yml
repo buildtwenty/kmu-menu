@@ -61,8 +61,17 @@ jobs:
           git diff --staged --quiet || git commit -m "🍚 메뉴 자동 갱신 $(date +'%Y-%m-%d')"
           git push
 
+      # Supabase 무료 플랜은 일주일 미사용이면 자동 일시정지 → 아침 푸시가 통째로 죽는다.
+      # 매일 가벼운 조회 하나로 활동을 남긴다. 실패해도 크롤링은 막지 않음(경고 로그만).
+      - name: Supabase keep-alive
+        continue-on-error: true
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: python scripts/supabase_ping.py
+
       # 오늘 이후 메뉴 중 칼로리 미매칭이 있으면 이슈로 알림.
       # continue-on-error로 이 단계가 실패해도 워크플로우는 성공 유지.
+      # 열린 이슈가 있으면 코멘트를 쌓지 않고 본문을 최신 목록으로 갈아끼운다.
       - name: 칼로리 미매칭 검사 & 이슈 알림
         continue-on-error: true
         env:
@@ -76,8 +85,8 @@ jobs:
             EXISTING=$(gh issue list --state open --limit 100 --json number,title \
               --jq "map(select(.title==\"${TITLE}\")) | .[0].number // empty")
             if [ -n "$EXISTING" ]; then
-              gh issue comment "$EXISTING" --body-file unmatched.md
-              echo "기존 이슈 #${EXISTING} 에 코멘트 추가"
+              gh issue edit "$EXISTING" --body-file unmatched.md
+              echo "기존 이슈 #${EXISTING} 본문 갱신"
             else
               gh issue create --title "$TITLE" --body-file unmatched.md
               echo "새 이슈 생성"

@@ -327,7 +327,13 @@ def main() -> int:
         print("::error::환경변수 누락: " + ", ".join(missing))
         return 1
 
-    subs = fetch_subscriptions(secret)
+    try:
+        subs = fetch_subscriptions(secret)
+    except requests.ConnectionError:
+        # 호스트가 안 풀리면 무료 플랜 프로젝트가 자동 일시정지된 것 (2026-10 장애).
+        # 스택트레이스 대신 원인을 한 줄로 남긴다. 예방은 crawl.yml의 supabase_ping.py.
+        print("::error::Supabase에 연결할 수 없음 — 프로젝트가 일시정지됐는지 대시보드에서 확인")
+        return 1
     print(f"대상 구독 {len(subs)}건")
     if not subs:
         print("구독이 없어 발송할 곳이 없습니다.")
