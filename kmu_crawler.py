@@ -260,6 +260,24 @@ def strip_promo_prefix(name: str) -> str:
     return PROMO_PREFIX_PAT.sub("", name).strip()
 
 
+# 원본 표기 잡티 정리 (메뉴 내용은 보존, 표기만 다듬는다):
+#   - 큰따옴표: '"Healthy Green Salad &드레싱2종"' 처럼 감싼 것, '"후라이드반계치킨SET …' 처럼
+#     짝이 안 맞는 것 모두 제거 (메뉴명에 따옴표가 의미를 갖는 경우는 없다)
+#   - 홀로 선 하이픈 토막: '… 배추김치 - 헬시그린샐러드 …' 의 ' - ' 구분자 제거
+#   - 한 글자씩 느낌표로 쪼갠 표기: '콩! 불! 떡!' -> '콩불떡' (토큰이 흩어져 키워드 매칭이 안 됨).
+#     '계란탁!' 같은 단어 단위 느낌표는 그대로 둔다 (2토막 이상 연속일 때만).
+QUOTE_PAT = re.compile(r"[\"“”]")
+LONE_DASH_PAT = re.compile(r"(?:(?<=\s)|^)-(?=\s|$)")
+SPLIT_BANG_PAT = re.compile(r"(?<![가-힣])((?:[가-힣]!\s*){2,})")
+
+
+def clean_name(name: str) -> str:
+    name = QUOTE_PAT.sub(" ", name)
+    name = LONE_DASH_PAT.sub(" ", name)
+    name = SPLIT_BANG_PAT.sub(lambda m: m.group(1).replace("!", "").replace(" ", "") + " ", name)
+    return re.sub(r"\s{2,}", " ", name).strip()
+
+
 # 원본 <td>는 같은 내용을 두 번 담는다: 숨은 폼값(<input type="hidden" name="aa"
 # value="{fourName=메뉴, fourValue=…}" />)과 그 뒤에 오는 실제 표시 텍스트.
 # 평소엔 파서가 input 태그를 통째로 넘겨 표시 텍스트만 읽히는데, 메뉴명에 큰따옴표가
@@ -334,6 +352,7 @@ def parse_cell(lines: list, default_meal, hours_sink=None):
         name = DECOR_PAT.sub("", name).strip()
         name = re.sub(r"\s{2,}", " ", name)  # 연속 공백 정리
         name = strip_promo_prefix(name)      # 'New 여름간식판매 감자버터구이' -> '감자버터구이'
+        name = clean_name(name)              # 따옴표·홀로 선 하이픈·'콩! 불! 떡!' 표기 정리
         # 안전망: 가격 없이 남은 이름이 공지처럼 보이거나(JUNK_NAME_PAT)
         # 끼니 라벨만(예: '석식') 덩그러니 남은 유령 항목이면 버림
         if name and not is_markup_junk(name) and not (
@@ -422,23 +441,33 @@ def parse_cell(lines: list, default_meal, hours_sink=None):
     return results
 
 
-def keep_weekend_blocks(blocks, cells, dates, date_to_idx, idx, default_meal) -> bool:
+def weekday_blocks_of_row(cells, dates, default_meal) -> list:
+    """행(코너) 하나의 평일(월~금) 셀들을 파싱한 blocks 목록 (빈 셀 제외).
+    주말 셀의 복붙 판정에 쓴다. 행마다 한 번만 만들어 주말 셀 2개가 같이 쓴다."""
+    out = []
+    for i, d in enumerate(dates):
+        if not d or i >= len(cells) or date.fromisoformat(d).weekday() >= 5:
+            continue
+        blocks = parse_cell(split_cell_lines(cells[i]), default_meal)
+        if blocks:
+            out.append(blocks)
+    return out
+
+
+def keep_weekend_blocks(blocks, weekday_blocks) -> bool:
     """주말 셀의 메뉴 blocks를 유지할지 판단.
     - 빈 셀이거나 가격 있는 실제 메뉴가 아니면 버림 (공지/파편 방지)
-    - 인접 평일(토→금, 일→월) 셀과 완전히 동일하면 복붙으로 보고 버림
-    - 그 외(가격 있고 인접 평일과 다른 '실제 주말 메뉴')면 유지
+    - 같은 주 평일(월~금) 셀 중 하나와 완전히 동일하면 복붙으로 보고 버림
+      (인접 평일만 보면 그날이 공휴일로 비어 있을 때 복붙을 놓친다 —
+       2026-10-10 토 청향 한식당이 한글날(금) 때문에 목요일 메뉴 복사본으로 저장됐던 사례)
+    - 그 외(가격 있고 그 주 평일 어느 날과도 다른 '실제 주말 메뉴')면 유지
     """
     if not blocks:
         return False
     if not any(i.get("price") for b in blocks for i in b["items"]):
         return False  # 가격 있는 항목이 하나도 없으면 실제 메뉴로 보지 않음
-    wd = date.fromisoformat(dates[idx]).weekday()  # 5=토, 6=일
-    adj_date = (date.fromisoformat(dates[idx]) + timedelta(days=1 if wd == 6 else -1)).isoformat()
-    ai = date_to_idx.get(adj_date)
-    if ai is not None and ai < len(cells):
-        adj_blocks = parse_cell(split_cell_lines(cells[ai]), default_meal)
-        if blocks == adj_blocks:
-            return False  # 인접 평일과 동일 = 주간 메뉴 복붙
+    if any(blocks == wb for wb in weekday_blocks):
+        return False  # 같은 주 평일과 동일 = 주간 메뉴 복붙
     return True
 
 
@@ -452,7 +481,6 @@ def parse_table(table) -> dict:
     for cell in header_cells:
         m = DATE_PAT.search(cell.get_text())
         dates.append(f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None)
-    date_to_idx = {d: i for i, d in enumerate(dates) if d}
 
     menus = []
     hours_raw = []
@@ -462,6 +490,7 @@ def parse_table(table) -> dict:
             continue
         corner = " ".join(cells[0].get_text(" ", strip=True).split())
         default_meal = guess_meal_from_corner(corner)
+        weekday_blocks = None   # 주말 셀을 만났을 때 한 번만 계산 (행 단위 캐시)
 
         for idx, cell in enumerate(cells[1:], start=1):
             if idx >= len(dates) or dates[idx] is None:
@@ -479,7 +508,9 @@ def parse_table(table) -> dict:
             # (예: 학생식당 방학 중 주말운영). 생활관식당은 주말에도 운영하므로 항상 유지.
             weekday = date.fromisoformat(dates[idx]).weekday()  # 5=토, 6=일
             if weekday >= 5 and "생활관" not in name:
-                if not keep_weekend_blocks(blocks, cells, dates, date_to_idx, idx, default_meal):
+                if weekday_blocks is None:
+                    weekday_blocks = weekday_blocks_of_row(cells, dates, default_meal)
+                if not keep_weekend_blocks(blocks, weekday_blocks):
                     continue
 
             for block in blocks:

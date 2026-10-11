@@ -1,6 +1,6 @@
 {
   "month": "2026-07",
-  "updated_at": "2026-08-01T07:06:43+09:00",
+  "updated_at": "2026-10-11T15:41:05+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -3222,39 +3222,6 @@
         },
         {
           "date": "2026-07-16",
-          "corner": "메뉴4",
-          "meal": null,
-          "items": [
-            {
-              "name": "한우차돌돌솥비빔밥과 청국장찌개 정식",
-              "price": 20000
-            }
-          ]
-        },
-        {
-          "date": "2026-07-18",
-          "corner": "메뉴1",
-          "meal": null,
-          "items": [
-            {
-              "name": "대구지리탕",
-              "price": 11000
-            }
-          ]
-        },
-        {
-          "date": "2026-07-18",
-          "corner": "메뉴3",
-          "meal": null,
-          "items": [
-            {
-              "name": "미나리 항정살 솥밥",
-              "price": 18000
-            }
-          ]
-        },
-        {
-          "date": "2026-07-18",
           "corner": "메뉴4",
           "meal": null,
           "items": [
