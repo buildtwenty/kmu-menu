@@ -11,6 +11,11 @@ permissions:
   contents: write
   issues: write
 
+# 같은 워크플로가 겹쳐 돌면(수동 실행 연타 등) 뒤 실행의 push가 거부된다 → 한 번에 하나씩 줄 세움
+concurrency:
+  group: crawl
+  cancel-in-progress: false
+
 jobs:
   crawl:
     runs-on: ubuntu-latest
@@ -59,6 +64,8 @@ jobs:
           git config user.email "actions@github.com"
           git add menus.json archive
           git diff --staged --quiet || git commit -m "🍚 메뉴 자동 갱신 $(date +'%Y-%m-%d')"
+          # 실행 중 원격에 다른 커밋이 올라왔을 수 있으니(수동 커밋 등) 받아온 뒤 푸시
+          git pull --rebase --autostash
           git push
 
       # Supabase 무료 플랜은 일주일 미사용이면 자동 일시정지 → 아침 푸시가 통째로 죽는다.
