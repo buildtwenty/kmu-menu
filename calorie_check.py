@@ -28,7 +28,7 @@ def main():
     data = json.load(open(MENUS_FILE, encoding="utf-8"))
 
     # GitHub Actions는 UTC로 도는데 menus.json 날짜는 KST 기준이므로 KST 오늘을 계산
-    today = (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).date().isoformat()
+    today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=9)).date().isoformat()
 
     unmatched = {}  # 메뉴명 -> {날짜들}
     for r in data.get("restaurants", []):
