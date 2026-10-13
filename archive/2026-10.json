@@ -1,6 +1,6 @@
 {
   "month": "2026-10",
-  "updated_at": "2026-10-12T09:15:35+09:00",
+  "updated_at": "2026-10-13T11:27:30+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -2009,7 +2009,7 @@
           "meal": "석식",
           "items": [
             {
-              "name": "중화덮밥*계란후라이 허니갈릭탕수 짜사이무침",
+              "name": "중화덮밥*마늘쫑 허니갈릭탕수 짜사이무침",
               "price": 5500
             }
           ]
@@ -2053,7 +2053,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "야끼볶음밥 딸기젤리",
+              "name": "야끼볶음밥 젤리",
               "price": 3900
             }
           ]
