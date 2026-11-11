@@ -1,6 +1,6 @@
 {
   "month": "2026-11",
-  "updated_at": "2026-11-10T12:14:57+09:00",
+  "updated_at": "2026-11-11T10:04:01+09:00",
   "source": "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do",
   "restaurants": [
     {
@@ -757,7 +757,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "Two in One 함박스테이크 &오므라이스 유부된장국 양상추샐러드 오이피클 요구를트",
+              "name": "Two in One 함박스테이크 &오므라이스 유부된장국 양상추샐러드 오이피클 요구르트",
               "price": 5900
             }
           ]
@@ -890,7 +890,7 @@
           "items": [
             {
               "name": "킹소세지김치덮밥 볼어묵조림",
-              "price": 4900
+              "price": 4700
             }
           ]
         },
@@ -2312,7 +2312,7 @@
           "meal": "중식",
           "items": [
             {
-              "name": "불닭소스참치마요우동 고로케*스윗하바네로S 자두주스",
+              "name": "불닭소스참치마요우동 쌀밥小 고로케*스윗하바네로S 자두주스",
               "price": 5500
             }
           ]
